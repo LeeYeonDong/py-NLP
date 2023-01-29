@@ -5,7 +5,7 @@ print(os.getcwd())
 
 import numpy as np
 
-# pip install tensorflow-gpu
+# python -m pip install --user tensorflow-gpu==2.9.1  
 import tensorflow as tf
 print(tf.test.is_built_with_cuda())
 print(tf.config.list_physical_devices('GPU'))
@@ -13,6 +13,8 @@ print(tf.config.list_physical_devices('GPU'))
 tf.__version__
 from tensorflow import keras
 keras.__version__
+
+tf.test.is_gpu_available()
 
 import tensorflow
 from tensorflow.python.client import device_lib

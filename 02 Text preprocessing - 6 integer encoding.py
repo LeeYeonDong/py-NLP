@@ -3,7 +3,6 @@ import numpy as np
 # pip install pandas
 import pandas as pd
 # dplython
-import pandas as pd
 from dplython import (DplyFrame, X, diamonds, select, sift,
   sample_n, sample_frac, head, arrange, mutate, group_by,
   summarize, DelayFunction)
@@ -150,3 +149,6 @@ vocab_size = 5
 tokenizer = Tokenizer(num_words = vocab_size + 2, oov_token = 'OOV')
 tokenizer.fit_on_texts(preprocessed_sentences)
 print(tokenizer.texts_to_sequences(preprocessed_sentences))
+
+preprocessed_sentences
+

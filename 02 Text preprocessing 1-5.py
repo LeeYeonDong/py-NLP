@@ -12,7 +12,14 @@ from dplython import (DplyFrame, X, diamonds, select, sift,
 df_ytb1 = pd.read_csv("D:/대학원/논문/커뮤니케이션학과/유튜브.csv", encoding = "utf-8")
 df_ytb1 = DplyFrame(df_ytb1)
 print(df_ytb1.index)
+print(df_ytb1.columns)
+print(df_ytb1.dtypes)
+print(df_ytb1.values)
+print(df_ytb1.shape)
 print(df_ytb1)
+df_ytb1.describe()
+df_ytb1.info() # 데이터프레임 여부 확인
+
 
 # loading packages
 from nltk import word_tokenize
@@ -23,6 +30,7 @@ from tensorflow.keras.preprocessing.text import text_to_word_sequence
 # word_tokenize
 df_ytb1["token_ytb"] = df_ytb1.apply(lambda row: word_tokenize(row['댓글_ytb']), axis=1)
 df_ytb1["token_ytb"]
+df_ytb1.loc[:, ["댓글_ytb"]]
 댓글_ytb = df_ytb1 >> select(X.댓글_ytb)
 댓글_ytb 
 
@@ -50,7 +58,7 @@ df_ytb1_댓글_doc.apply(lambda row: sent_tokenize(row['댓글_doc']), axis=1)
 # pip install kss
 import kss
 text = '딥 러닝 자연어 처리가 재미있기는 합니다. 그런데 문제는 영어보다 한국어로 할 때 너무 어렵습니다. 이제 해보면 알걸요?'
-print('한국어 문장 토큰화 :',kss.split_sentences(text))
+kss.split_sentences(text)
 
 # 품사 태깅(Part-of-speech tagging)
 # NLTK와 KoNLPy를 이용한 영어, 한국어 토큰화 실습

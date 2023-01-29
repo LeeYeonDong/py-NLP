@@ -6,6 +6,7 @@
 # pip install nltk
 # pip install dplython
 # pip install pandas-profiling
+# vs에서 실행은 alt + enter
 
 import nltk
 nltk.download('treebank')
@@ -27,7 +28,7 @@ import numpy as np
 # pip install pandas
 import pandas as pd
 
-## youtube data loading
+# youtube data loading
 df_ytb1 = pd.read_csv("D:/대학원/논문/커뮤니케이션학과/유튜브.csv", encoding = "utf-8")
 print(df_ytb1.index)
 # pip install pandas-profiling
