@@ -13,9 +13,6 @@ df_ytb1 = pd.read_csv("D:/대학원/논문/커뮤니케이션학과/유튜브.cs
 # lower character + 특수문자 지우기
 df_ytb1["댓글_ytb"] = df_ytb1["댓글_ytb"].apply(str.lower).str.replace(pat = r'[^\w]', repl = ' ', regex = True)
 
-# 특수문자 지우기
-
-
 print(df_ytb1.columns)
 print(df_ytb1.values)
 print(df_ytb1.shape)
@@ -83,7 +80,7 @@ kss.split_sentences(text)
 from nltk import word_tokenize
 from nltk import pos_tag
 
-댓글_ytb_tag = df_ytb1["댓글_ytb"].apply(word_tokenize).apply(pos_tag)
+df_ytb1["댓글_ytb_tag"] = df_ytb1["댓글_ytb"].apply(word_tokenize).apply(pos_tag)
 댓글_ytb_tag.info()
 
 
@@ -140,8 +137,8 @@ df_ytb1["token_ytb"].info()
 
 df_ytb1["token_ytb"] = df_ytb1["댓글_ytb"].apply(word_tokenize)
 
-df_ytb1["token_ytb"].apply(lambda i: [word for word in i if word not in stop_words])
-
+df_ytb1["token_ytb"] = df_ytb1["token_ytb"].apply(lambda i: [word for word in i if word not in stop_words])
+df_ytb1 = df_ytb1.drop(columns = ["댓글_ytb_tag"], axis = 1)
 
 
 
