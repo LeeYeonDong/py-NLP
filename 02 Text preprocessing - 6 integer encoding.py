@@ -24,6 +24,7 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 def sen_word_tokenize(text):
     sents = sent_tokenize(text)
     words = [word_tokenize(sent_1) for sent_1 in sents]
+    words = [[word for word in sent if len(word) > 2] for sent in words]
     return words
 
 df_ytb1["sen_word_ytb"] = df_ytb1["댓글_ytb"].apply(sen_word_tokenize)
@@ -34,5 +35,7 @@ tokenizer.fit_on_texts(df_ytb1["댓글_ytb"])
 # fit_on_texts()안에 코퍼스를 입력으로 하면 빈도수를 기준으로 단어 집합을 생성.
 df_ytb1["encoded_ytb"] = df_ytb1["sen_word_ytb"].apply(lambda word: tokenizer.texts_to_sequences(word))
 
-df_ytb1["encoded_ytb"] = df_ytb1["sen_word_ytb"].apply(lambda word: [token for token in tokenizer.texts_to_sequences(word)[0] if token >= 5])
-# 결과가 정상적으로 출력됨
+df_ytb1["encoded_ytb"] = df_ytb1["encoded_ytb"].apply(lambda encoded: [x for x in encoded if len(x) >= 5])
+# remove value if length of index is less than 5
+
+df_ytb1 = df_ytb1.dropna(axis = 0) # To remove rows that contain NA values

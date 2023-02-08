@@ -18,8 +18,12 @@ trump = trump.loc[(trump.isRetweet == "f") & (trump.text != ""), :]
 timestamps = trump.date.to_list()
 tweets = trump.text.to_list()
 
+trump[0:6]
+
 # BERTopic
+# 두 가지 출력인 토픽(topics)과 확률(probabilities)이 만들어집니다. 토픽의 값은 단순히 할당된 토픽을 나타냅니다. 반면에 확률은 문서가 일어날 수 있는 토픽에 포함될 가능성
 topic_model = BERTopic(min_topic_size = 70, n_gram_range = (1,3), verbose = True, calculate_probabilities = True)
+# or topic_model = BERTopic(nr_topics = "auto")
 topics, probabilities = topic_model.fit_transform(trump["text"].to_list())
 
 # corresponding timestamps, and the related topics
@@ -36,7 +40,12 @@ topics_over_time_date = topic_model.topics_over_time(tweets, timestamps, datetim
 topic_model.visualize_topics_over_time(topics_over_time_date, top_n_topics = 20).show()
 topic_model.visualize_topics_over_time(topics_over_time_date, topics = [9, 10, 11, 15, 8, 12]).show()
 
-# Visualization 2
+# Visualization 2 
+# 상대적 빈도(relative frequency)로 생성된 토픽에 액세스
+topic_model.get_topic_freq().head()
+
+# 두 번째로 빈번하게 생성된 주제, 즉 Topic 0. -1은 outlier
+topic_model.get_topic(0)
 topic_model.get_topic_info().head(20) # -1 = outlier
 
 topic_nr = topic_model.get_topic_info().iloc[6]["Topic"] # select a frequent topic
@@ -65,23 +74,8 @@ topic_model.visualize_distribution(topic_model.probabilities_[0], min_probabilit
 topic_model.visualize_distribution(probabilities[0]).show()
 
 
-
-## interactive topic modeling
-# load data
+# another load data
 from sklearn.datasets import fetch_20newsgroups
 docs = fetch_20newsgroups(subset='all',  remove=('headers', 'footers', 'quotes'))['data']
 
-docs.info()
-
-# 두 가지 출력인 토픽(topics)과 확률(probabilities)이 만들어집니다. 토픽의 값은 단순히 할당된 토픽을 나타냅니다. 반면에 확률은 문서가 일어날 수 있는 토픽에 포함될 가능성
-model = BERTopic()
-topics, probabilities = model.fit_transform(docs)
-
-# 상대적 빈도(relative frequency)로 생성된 토픽에 액세스
-model.get_topic_freq().head()
-
-# 두 번째로 빈번하게 생성된 주제, 즉 Topic 49. -1은 outlier
-model.get_topic(49)
-
-
-
+docs[0:1]
