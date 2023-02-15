@@ -20,6 +20,7 @@ tweets = trump.text.to_list()
 
 trump[0:6]
 
+
 # BERTopic
 # 두 가지 출력인 토픽(topics)과 확률(probabilities)이 만들어집니다. 토픽의 값은 단순히 할당된 토픽을 나타냅니다. 반면에 확률은 문서가 일어날 수 있는 토픽에 포함될 가능성
 topic_model = BERTopic(min_topic_size = 70, n_gram_range = (1,3), verbose = True, calculate_probabilities = True)
