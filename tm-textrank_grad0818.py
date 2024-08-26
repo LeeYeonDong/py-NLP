@@ -11,78 +11,13 @@ import stanza
 from infomap import Infomap
 from math import log2
 import re
-
-# Stanza 다운로드 및 파이프라인 설정
-stanza.download('en')
-nlp = stanza.Pipeline('en')
-
-# 파일 경로 설정
-input_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14.csv'
-output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv'
-
-# 전치사와 관사 리스트 (소문자로 변환하여 저장)
-stop_words = {"in", "on", "at", "by", "with", "about", "against", "between", "into", "through", "during", "before", 
-              "after", "above", "below", "to", "from", "up", "down", "in", "out", "off", "over", "under", "again", 
-              "further", "then", "once", "a", "an", "the"}
-
-# 각 행에 대해 전처리 수행
-def preprocess_row(row):
-    for column in ['abstract', 'title', 'keywords']:
-        text = row[column]
-        
-        # 텍스트에서 특수 문자 및 괄호 제거
-        text_cleaned = re.sub(r'[^A-Za-z0-9\s]', '', str(text))  # 알파벳, 숫자, 공백 외의 문자 제거
-        text_cleaned = re.sub(r'[\[\]{}()]', '', text_cleaned)  # 대괄호, 중괄호, 소괄호 제거
-        text_cleaned = re.sub(r'\s+', ' ', text_cleaned).strip()  # 다중 공백을 단일 공백으로 변환
-        
-        # Stanza를 사용한 전처리
-        doc = nlp(text_cleaned)
-        processed_text = []
-        for sentence in doc.sentences:
-            for word in sentence.words:
-                if word.upos in ['VERB', 'NOUN', 'ADJ']:  # 동사, 명사, 형용사만 필터링
-                    lemma = word.lemma.lower()
-                    # 한 글자 단어, 전치사, 관사 제거
-                    if len(lemma) > 1 and lemma not in stop_words:
-                        processed_text.append(lemma)
-        
-        # 전처리된 텍스트를 다시 해당 열에 저장
-        row[column] = " ".join(processed_text)
-    
-    return row
-
-# 청크 단위로 파일을 처리
-chunk_size = 100  # 청크 크기를 설정 (한 번에 처리할 행의 수)
-chunks = []
-
-for i, chunk in enumerate(pd.read_csv(input_file_path, chunksize=chunk_size)):
-    print(f"Processing chunk {i + 1}")
-    
-    # keywords, title, abstract 중 NaN이거나 빈 값인 행을 제거
-    chunk = chunk.dropna(subset=['keywords', 'title', 'abstract'])
-    chunk = chunk[(chunk['keywords'] != '[]') & (chunk['title'] != '[]') & (chunk['abstract'] != '[]')]
-    chunk = chunk[(chunk['keywords'] != ' ') & (chunk['title'] != ' ') & (chunk['abstract'] != ' ')]
-    
-    # 각 행에 대해 전처리 수행
-    chunk = chunk.apply(preprocess_row, axis=1)
-    
-    # 처리된 청크를 저장
-    chunks.append(chunk)
-
-    # 청크를 바로 CSV로 저장(누적 저장)
-    chunk.to_csv(output_file_path, mode='a', header=(i == 0), index=False)
-    print(f"Chunk {i + 1} processed and saved.")
-
-print("All chunks processed and saved successfully.")
-
-# 필요시 전처리된 데이터를 CSV 파일로 저장
-# df_filtered.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_sample_processed.csv', index=False)
-# df_filtered.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv', index=False)
-
+from random import randint, random
+import math
 
 # 파일 경로 설정
 # file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_sample_processed.csv'
-file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv'
+# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv' # 수정
+file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
@@ -94,6 +29,8 @@ nltk.download('punkt')
 #### 1. textrank
 ## abstract에서 keyword를 Textrank를 사용하여 추출
 df_filtered_1 = df_filtered.copy()
+df_filtered_1.dtypes
+df_filtered_1.memory_usage()
 
 # Textrank 키워드 추출 함수
 def textrank_keywords(text, top_n=5):
@@ -811,7 +748,7 @@ df_result51 = df_filtered_51[['precision', 'recall', 'f1', 'rouge1', 'rouge2', '
 print(df_result51)
 
 
-#### 6.textrank + term frequency, term postion, word co-occurence + Infomap
+#### 6.textrank + term frequency, term postion, word co-occurence + Infomap (tf, tp 반영해야함)
 df_filtered_infomap = df_filtered.copy()
 
 # 공출현 계산 함수
@@ -824,6 +761,36 @@ def calculate_co_occurrence(sentences, window_size=2):
                 co_occurrence[(word, words[j])] += 1
                 co_occurrence[(words[j], word)] += 1
     return co_occurrence
+
+# 시뮬레이티드 어닐링을 사용한 최적화 함수
+def simulated_annealing(infomap, initial_temperature=1000, cooling_rate=0.003):
+    current_temperature = initial_temperature
+    best_solution = infomap.tree
+    best_description_length = infomap.codelength
+    
+    while current_temperature > 1:
+        # 무작위로 두 노드를 선택하고 교환 시도
+        node_a = randint(0, len(infomap.tree) - 1)
+        node_b = randint(0, len(infomap.tree) - 1)
+        
+        # 임시로 노드를 교환해봄
+        infomap.tree[node_a], infomap.tree[node_b] = infomap.tree[node_b], infomap.tree[node_a]
+        
+        # 새로운 설명 길이 계산
+        new_description_length = infomap.codelength
+        
+        # 새 솔루션이 더 좋은지 또는 온도에 따라 채택할지 결정
+        if new_description_length < best_description_length or math.exp((best_description_length - new_description_length) / current_temperature) > random():
+            best_solution = infomap.tree
+            best_description_length = new_description_length
+        else:
+            # 교환 되돌리기
+            infomap.tree[node_a], infomap.tree[node_b] = infomap.tree[node_b], infomap.tree[node_a]
+        
+        # 온도 감소
+        current_temperature *= 1 - cooling_rate
+    
+    return best_solution
 
 # Infomap을 사용한 Textrank 키워드 추출 함수
 def infomap_textrank_keywords(title, abstract, top_n=5):
@@ -860,9 +827,12 @@ def infomap_textrank_keywords(title, abstract, top_n=5):
     
     infomap.run()
     
+    # 시뮬레이티드 어닐링을 통해 최적화
+    optimized_tree = simulated_annealing(infomap)
+    
     # 모듈별로 중요한 단어 선택
     keywords = []
-    for node in infomap.tree:
+    for node in optimized_tree:
         if node.is_leaf:
             sentence_idx = node.node_id
             words = word_tokenize(sentences[sentence_idx].lower())
@@ -900,7 +870,7 @@ df_result_infomap = df_filtered_infomap[['precision', 'recall', 'f1', 'rouge1', 
 print(df_result_infomap)
 
 
-#### 6.1 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
+#### 6.1 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe (tf, tp 반영해야함)
 df_filtered_infomap_g = df_filtered.copy()
 
 # GloVe 임베딩 로드 함수
@@ -1001,7 +971,7 @@ df_result_infomap_g = df_filtered_infomap_g[['precision', 'recall', 'f1', 'rouge
 print(df_result_infomap_g)
 
 
-#### 7. textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
+#### 7. textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical (tf, tp 반영해야함)
 df_filtered_infomap_h = df_filtered.copy()
 
 # 공출현 그래프 생성 함수
@@ -1110,7 +1080,7 @@ df_result_infomap_h = df_filtered_infomap_h[['precision', 'recall', 'f1', 'rouge
 print(df_result_infomap_h)
 
 
-#### 8. textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy
+#### 8. textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy (tf, tp 반영해야함)
 df_filtered_infomap_m = df_filtered.copy()
 
 # 공출현 계산 함수
@@ -1277,5 +1247,5 @@ summary_df = pd.DataFrame(sums_dict)
 
 # 전치 (Transpose)하여 인덱스가 행으로, 열이 컬럼으로 되게 변환
 summary_df = summary_df.T
-# 필요시 전처리된 데이터를 CSV 파일로 저장
+# summary_df를 CSV 파일로 저장
 summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result.csv', index=False)

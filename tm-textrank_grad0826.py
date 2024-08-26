@@ -11,89 +11,35 @@ import stanza
 from infomap import Infomap
 from math import log2
 import re
+from random import randint, random
+import math
+from sklearn.metrics import precision_score, recall_score, f1_score
 
-# Stanza 다운로드 및 파이프라인 설정
-stanza.download('en')
-nlp = stanza.Pipeline('en')
-
-# 파일 경로 설정
-input_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14.csv'
-output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv'
-
-# 전치사와 관사 리스트 (소문자로 변환하여 저장)
-stop_words = {"in", "on", "at", "by", "with", "about", "against", "between", "into", "through", "during", "before", 
-              "after", "above", "below", "to", "from", "up", "down", "in", "out", "off", "over", "under", "again", 
-              "further", "then", "once", "a", "an", "the"}
-
-# 각 행에 대해 전처리 수행
-def preprocess_row(row):
-    for column in ['abstract', 'title', 'keywords']:
-        text = row[column]
-        
-        # 텍스트에서 특수 문자 및 괄호 제거
-        text_cleaned = re.sub(r'[^A-Za-z0-9\s]', '', str(text))  # 알파벳, 숫자, 공백 외의 문자 제거
-        text_cleaned = re.sub(r'[\[\]{}()]', '', text_cleaned)  # 대괄호, 중괄호, 소괄호 제거
-        text_cleaned = re.sub(r'\s+', ' ', text_cleaned).strip()  # 다중 공백을 단일 공백으로 변환
-        
-        # Stanza를 사용한 전처리
-        doc = nlp(text_cleaned)
-        processed_text = []
-        for sentence in doc.sentences:
-            for word in sentence.words:
-                if word.upos in ['VERB', 'NOUN', 'ADJ']:  # 동사, 명사, 형용사만 필터링
-                    lemma = word.lemma.lower()
-                    # 한 글자 단어, 전치사, 관사 제거
-                    if len(lemma) > 1 and lemma not in stop_words:
-                        processed_text.append(lemma)
-        
-        # 전처리된 텍스트를 다시 해당 열에 저장
-        row[column] = " ".join(processed_text)
-    
-    return row
-
-# 청크 단위로 파일을 처리
-chunk_size = 100  # 청크 크기를 설정 (한 번에 처리할 행의 수)
-chunks = []
-
-for i, chunk in enumerate(pd.read_csv(input_file_path, chunksize=chunk_size)):
-    print(f"Processing chunk {i + 1}")
-    
-    # keywords, title, abstract 중 NaN이거나 빈 값인 행을 제거
-    chunk = chunk.dropna(subset=['keywords', 'title', 'abstract'])
-    chunk = chunk[(chunk['keywords'] != '[]') & (chunk['title'] != '[]') & (chunk['abstract'] != '[]')]
-    chunk = chunk[(chunk['keywords'] != ' ') & (chunk['title'] != ' ') & (chunk['abstract'] != ' ')]
-    
-    # 각 행에 대해 전처리 수행
-    chunk = chunk.apply(preprocess_row, axis=1)
-    
-    # 처리된 청크를 저장
-    chunks.append(chunk)
-
-    # 청크를 바로 CSV로 저장(누적 저장)
-    chunk.to_csv(output_file_path, mode='a', header=(i == 0), index=False)
-    print(f"Chunk {i + 1} processed and saved.")
-
-print("All chunks processed and saved successfully.")
-
-# 필요시 전처리된 데이터를 CSV 파일로 저장
-# df_filtered.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_sample_processed.csv', index=False)
-# df_filtered.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv', index=False)
 
 
 # 파일 경로 설정
 # file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_sample_processed.csv'
-file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv'
+file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv' # 수정
+# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
+df_filtered = df_filtered.astype(str)
+df_filtered.dtypes
+df_filtered = df_filtered[['id', 'title', 'keywords', 'year', 'abstract', 'authors']]
+df_filtered = df_filtered.dropna(subset=['id', 'title', 'keywords', 'year', 'abstract', 'authors'])
+df_filtered['keywords']
 
 # keyword 열에서 가장 많은 키워드 수 계산
-
 nltk.download('punkt')
 
 #### 1. textrank
 ## abstract에서 keyword를 Textrank를 사용하여 추출
 df_filtered_1 = df_filtered.copy()
+df_filtered_1.dtypes
+df_filtered_1.memory_usage()
+
+df_filtered_1['keywords']
 
 # Textrank 키워드 추출 함수
 def textrank_keywords(text, top_n=5):
@@ -114,11 +60,23 @@ def textrank_keywords(text, top_n=5):
     
     return list(set(keywords))[:top_n]
 
-# 추출된 키워드를 데이터 프레임에 추가
-df_filtered_1['extracted_keywords'] = df_filtered_1['abstract'].apply(lambda x: textrank_keywords(x, top_n=5))
+# 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
+df_filtered_1['num_keywords'] = df_filtered_1['keywords'].apply(lambda x: len(x.split()))
+
+# 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
+df_filtered_1['extracted_keywords'] = df_filtered_1.apply(
+    lambda row: textrank_keywords(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
+    axis=1
+)
+
+# 'num_keywords' 열은 필요 없으므로 제거 (선택 사항)
+df_filtered_1.drop(columns=['num_keywords'], inplace=True)
 
 # 데이터 프레임 출력 (처음 5행)
 print(df_filtered_1[['abstract', 'keywords', 'extracted_keywords']])
+df_filtered_1['abstract']
+df_filtered_1['keywords']
+df_filtered_1['extracted_keywords']
 
 # Precision, Recall, F1 계산 함수
 def calculate_metrics(extracted, actual):
@@ -135,13 +93,8 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_1['metrics'] = df_filtered_1.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-df_filtered_1[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_1['metrics'].tolist(), index=df_filtered_1.index)
-
-print(df_filtered_1[['keywords', 'extracted_keywords', 'precision', 'recall', 'f1']].head())
-
-# ROUGE 값 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -149,16 +102,19 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
+# Apply the metrics calculations
+df_filtered_1['metrics'] = df_filtered_1.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+df_filtered_1[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_1['metrics'].tolist(), index=df_filtered_1.index)
 
-df_filtered_1['rouge'] = df_filtered_1.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# Apply the ROUGE calculations
+df_filtered_1['rouge'] = df_filtered_1.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
-# ROUGE 점수를 DataFrame에 추가
+# Extract individual ROUGE scores
 df_filtered_1['rouge1'] = df_filtered_1['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_1['rouge2'] = df_filtered_1['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_1['rougeL'] = df_filtered_1['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result1 = df_filtered_1[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
-
+# 최종 결과 데이터프레임
+df_result1 = df_filtered_1[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 print(df_result1)
 
 # 1. Precision (정밀도)
@@ -188,33 +144,29 @@ def calculate_tf(text):
     return tf
 
 # 공출현 빈도 계산 함수
-def calculate_co_occurrence(sentences, window_size=2): # window size 조절
+def calculate_co_occurrence(sentences, window_size=2):  # window size 조절
     co_occurrence = Counter()
     for sentence in sentences:
         words = word_tokenize(sentence.lower())
         for i, word in enumerate(words):
-            for j in range(i+1, min(i+1+window_size, len(words))):
+            for j in range(i + 1, min(i + 1 + window_size, len(words))):
                 co_occurrence[(word, words[j])] += 1
                 co_occurrence[(words[j], word)] += 1
     return co_occurrence
 
 # Textrank 키워드 추출 함수
 def textrank_keywords(title, abstract, top_n=5, beta=0.5):
-    # 제목과 초록을 합쳐서 문장으로 분할
     text = title + ' ' + abstract
     sentences = sent_tokenize(text)
     words = word_tokenize(text.lower())
     
-    # 단어의 TF 값 계산
     tf = calculate_tf(text)
     
-    # 공출현 빈도 계산
     co_occurrence = calculate_co_occurrence(sentences)
     
-    # 유사도 행렬 초기화
+    # 제목과 초록에서 단어의 중요도를 반영하여 유사도 행렬을 계산
     similarity_matrix = np.zeros((len(sentences), len(sentences)))
     
-    # 유사도 행렬 계산
     for i, sentence_i in enumerate(sentences):
         for j, sentence_j in enumerate(sentences):
             if i == j:
@@ -226,31 +178,35 @@ def textrank_keywords(title, abstract, top_n=5, beta=0.5):
             for word_i in words_i:
                 for word_j in words_j:
                     if (word_i, word_j) in co_occurrence:
+                        # word position importance 반영
+                        weight_i = 1 if word_i in word_tokenize(title.lower()) else beta
+                        weight_j = 1 if word_j in word_tokenize(title.lower()) else beta
                         similarity += co_occurrence[(word_i, word_j)] / sum(co_occurrence[(word_i, word)] for word in words)
-            similarity_matrix[i][j] = similarity
-    
-    # 가중치 적용
-    for word in tf.keys():
-        if word in word_tokenize(title.lower()):
-            tf[word] = 1
-        elif word in word_tokenize(abstract.lower()):
-            tf[word] = beta
-    
+                        similarity_matrix[i][j] += similarity * weight_i * weight_j  # 중요도 반영
+
     nx_graph = nx.from_numpy_array(similarity_matrix)
     scores = nx.pagerank(nx_graph)
     ranked_sentences = sorted(((scores[i], s) for i, s in enumerate(sentences)), reverse=True)
     
     keywords = []
-    for score, sentence in ranked_sentences[:top_n]:
+    for score, sentence in ranked_sentences:
         keywords.extend(word_tokenize(sentence.lower()))
+        if len(set(keywords)) >= top_n:
+            break
     
-    return list(set(keywords))
+    return list(set(keywords))[:top_n]
 
-# 추출된 키워드를 데이터 프레임에 추가
-df_filtered_2['extracted_keywords'] = df_filtered_2.apply(lambda row: textrank_keywords(row['title'], row['abstract'], top_n=5, beta=0.5), axis=1)
+# 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
+df_filtered_2['num_keywords'] = df_filtered_2['keywords'].apply(lambda x: len(x.split()))
+
+# 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
+df_filtered_2['extracted_keywords'] = df_filtered_2.apply( lambda row: textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [], axis=1)
+
+# 'num_keywords' 열은 필요 없으므로 제거 (선택 사항)
+df_filtered_2.drop(columns=['num_keywords'], inplace=True)
 
 # 데이터 프레임 출력 (처음 5행)
-print(df_filtered_2[['abstract', 'keywords', 'extracted_keywords']].head())
+print(df_filtered_2[['abstract', 'keywords', 'extracted_keywords']])
 
 # Precision, Recall, F1 계산 함수
 def calculate_metrics(extracted, actual):
@@ -267,11 +223,8 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_2['metrics'] = df_filtered_2.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-df_filtered_2[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_2['metrics'].tolist(), index=df_filtered_2.index)
-
-# ROUGE 점수 계산 함수
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -279,16 +232,19 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
-df_filtered_2['rouge'] = df_filtered_2.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# Apply the metrics calculations
+df_filtered_2['metrics'] = df_filtered_2.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+df_filtered_2[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_2['metrics'].tolist(), index=df_filtered_2.index)
 
-# ROUGE 점수를 DataFrame에 추가
+# Apply the ROUGE calculations
+df_filtered_2['rouge'] = df_filtered_2.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+# Extract individual ROUGE scores
 df_filtered_2['rouge1'] = df_filtered_2['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_2['rouge2'] = df_filtered_2['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_2['rougeL'] = df_filtered_2['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result2 = df_filtered_2[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
-
-# 결과 출력
+# 최종 결과 데이터프레임
+df_result2 = df_filtered_2[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 print(df_result2)
 
 
@@ -333,7 +289,7 @@ def compute_similarity_matrix(words, embeddings, epsilon=1e-5):
                 similarity_matrix[i][j] = similarity if similarity > epsilon else epsilon
     return similarity_matrix
 
-# without noise
+# # without noise
 # def compute_similarity_matrix(words, embeddings):
 #     size = len(words)
 #     similarity_matrix = np.zeros((size, size))
@@ -366,11 +322,18 @@ def tp_coglo_textrank(text, top_n=5, embeddings=None):
             break
     return keywords
 
-# DataFrame에서 GloVe 및 TP-CoGlo-TextRank를 사용하여 키워드 추출
-df_filtered_3['extracted_keywords'] = df_filtered_3['abstract'].apply(lambda x: tp_coglo_textrank(x, top_n=5, embeddings=glove_embeddings))
+# 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
+df_filtered_3['num_keywords'] = df_filtered_3['keywords'].apply(lambda x: len(x.split()))
+
+# 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
+df_filtered_3['extracted_keywords'] = df_filtered_3.apply(lambda row: tp_coglo_textrank(row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [], axis=1)
+
+# 'num_keywords' 열은 필요 없으므로 제거 (선택 사항)
+df_filtered_3.drop(columns=['num_keywords'], inplace=True)
 
 # 데이터 프레임 출력 (처음 5행)
 print(df_filtered_3[['abstract', 'keywords', 'extracted_keywords']])
+
 
 # Precision, Recall, F1 계산 함수
 def calculate_metrics(extracted, actual):
@@ -387,13 +350,8 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_3['metrics'] = df_filtered_3.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-df_filtered_3[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_3['metrics'].tolist(), index=df_filtered_3.index)
-
-print(df_filtered_3[['abstract', 'keywords', 'extracted_keywords', 'precision', 'recall', 'f1']])
-
-# ROUGE 값 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -401,15 +359,19 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
-df_filtered_3['rouge'] = df_filtered_3.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# Apply the metrics calculations
+df_filtered_3['metrics'] = df_filtered_3.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+df_filtered_3[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_3['metrics'].tolist(), index=df_filtered_3.index)
 
-# ROUGE 점수를 DataFrame에 추가
+# Apply the ROUGE calculations
+df_filtered_3['rouge'] = df_filtered_3.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+# Extract individual ROUGE scores
 df_filtered_3['rouge1'] = df_filtered_3['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_3['rouge2'] = df_filtered_3['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_3['rougeL'] = df_filtered_3['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result3 = df_filtered_3[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
-
+# 최종 결과 데이터프레임
+df_result3 = df_filtered_3[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 print(df_result3)
 
 
@@ -448,12 +410,17 @@ def calculate_ws_weight(text, top_n=5):
     keywords = [word for _, word in ranked_words[:top_n]]
     return keywords
 
+# 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
+df_filtered_4['num_keywords'] = df_filtered_4['keywords'].apply(lambda x: len(x.split()))
+
 # 데이터 프레임에 추출된 키워드를 추가
-df_filtered_4['extracted_keywords'] = df_filtered_4['abstract'].apply(lambda x: calculate_ws_weight(x, top_n=5))
+df_filtered_4['extracted_keywords'] = df_filtered_4.apply(lambda row: calculate_ws_weight(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
+
+# 필요에 따라 'num_keywords' 열을 제거할 수 있습니다
+df_filtered_4.drop(columns=['num_keywords'], inplace=True)
 
 # 추출된 키워드를 출력
 print(df_filtered_4[['abstract', 'keywords', 'extracted_keywords']])
-
 
 # Precision, Recall, F1 계산 함수
 def calculate_metrics(extracted, actual):
@@ -470,13 +437,8 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_4['metrics'] = df_filtered_4.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-df_filtered_4[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_4['metrics'].tolist(), index=df_filtered_4.index)
-
-print(df_filtered_4[['abstract', 'keyword', 'extracted_keywords', 'precision', 'recall', 'f1']].head())
-
-# ROUGE 값 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -484,15 +446,19 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
-df_filtered_4['rouge'] = df_filtered_4.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# Apply the metrics calculations
+df_filtered_4['metrics'] = df_filtered_4.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+df_filtered_4[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_4['metrics'].tolist(), index=df_filtered_4.index)
 
-# ROUGE 점수를 DataFrame에 추가
+# Apply the ROUGE calculations
+df_filtered_4['rouge'] = df_filtered_4.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+# Extract individual ROUGE scores
 df_filtered_4['rouge1'] = df_filtered_4['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_4['rouge2'] = df_filtered_4['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_4['rougeL'] = df_filtered_4['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result4 = df_filtered_4[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
-
+# 최종 결과 데이터프레임
+df_result4 = df_filtered_4[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 print(df_result4)
 
 
@@ -548,9 +514,8 @@ def calculate_co_occurrence(sentences, window_size=2): # window size 조절
                 co_occurrence[(words[j], word)] += 1
     return co_occurrence
 
-# Textrank 키워드 추출 함수
+# Textrank 키워드 추출 함수 수정
 def textrank_keywords(title, abstract, top_n=5, beta=0.5):
-    # 제목과 초록을 합쳐서 문장으로 분할
     text = title + ' ' + abstract
     weighted_sentences = apply_weights(text)
     
@@ -580,6 +545,9 @@ def textrank_keywords(title, abstract, top_n=5, beta=0.5):
             for word_i in words_i:
                 for word_j in words_j:
                     if (word_i, word_j) in co_occurrence:
+                        # word position importance 반영
+                        weight_i = 1 if word_i in word_tokenize(title.lower()) else beta
+                        weight_j = 1 if word_j in word_tokenize(title.lower()) else beta
                         similarity += co_occurrence[(word_i, word_j)] / sum(co_occurrence[(word_i, word)] for word in words)
             similarity_matrix[i][j] = similarity * ((weights[i] + weights[j]) / 2)  # 가중치 적용
     
@@ -593,8 +561,20 @@ def textrank_keywords(title, abstract, top_n=5, beta=0.5):
     
     return list(set(keywords))
 
-# 추출된 키워드를 데이터 프레임에 추가
-df_filtered_5['extracted_keywords'] = df_filtered_5.apply(lambda row: textrank_keywords(row['title'], row['abstract'], top_n=5, beta=0.5), axis=1)
+# 키워드 개수를 계산하는 함수
+def get_keyword_count(keywords):
+    return len(keywords.split())
+
+# 추출된 키워드를 데이터 프레임에 추가 (top_n을 각 행의 keywords 단어 개수로 설정)
+df_filtered_5['extracted_keywords'] = df_filtered_5.apply(
+    lambda row: textrank_keywords(
+        row['title'], 
+        row['abstract'], 
+        top_n=get_keyword_count(row['keywords']), 
+        beta=0.5
+    ) if pd.notnull(row['abstract']) else [], 
+    axis=1
+)
 
 # 데이터 프레임 출력 (처음 5행)
 print(df_filtered_5[['abstract', 'keywords', 'extracted_keywords']])
@@ -614,11 +594,8 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_5['metrics'] = df_filtered_5.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-df_filtered_5[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_5['metrics'].tolist(), index=df_filtered_5.index)
-
-# ROUGE 점수 계산 함수
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -626,16 +603,19 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
-df_filtered_5['rouge'] = df_filtered_5.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# Apply the metrics calculations
+df_filtered_5['metrics'] = df_filtered_5.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+df_filtered_5[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_5['metrics'].tolist(), index=df_filtered_5.index)
 
-# ROUGE 점수를 DataFrame에 추가
+# Apply the ROUGE calculations
+df_filtered_5['rouge'] = df_filtered_5.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+# Extract individual ROUGE scores
 df_filtered_5['rouge1'] = df_filtered_5['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_5['rouge2'] = df_filtered_5['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_5['rougeL'] = df_filtered_5['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result5 = df_filtered_5[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
-
-# 결과 출력
+# 최종 결과 데이터프레임
+df_result5 = df_filtered_5[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 print(df_result5)
 
 
@@ -709,27 +689,25 @@ def apply_weights(text):
     
     return weighted_sentences
 
-# TF 계산 함수
-def calculate_tf(text):
-    words = word_tokenize(text.lower())
-    doc_length = len(words)
-    word_counts = Counter(words)
-    tf = {word: count / doc_length for word, count in word_counts.items()}
+# TF 계산 함수 (Word Position Importance 반영)
+def calculate_tf_with_position(title, abstract, beta=0.5):
+    words_title = word_tokenize(title.lower())
+    words_abstract = word_tokenize(abstract.lower())
+    doc_length = len(words_title) + len(words_abstract)
+    
+    # 제목에 있는 단어의 TF는 1, 초록에 있는 단어의 TF는 β로 설정
+    tf = {}
+    
+    for word in words_title:
+        tf[word] = tf.get(word, 0) + 1 / doc_length
+    
+    for word in words_abstract:
+        tf[word] = tf.get(word, 0) + beta / doc_length
+    
     return tf
 
-# 공출현 빈도 계산 함수
-def calculate_co_occurrence(sentences, window_size=2): # window size 조절
-    co_occurrence = Counter()
-    for sentence in sentences:
-        words = word_tokenize(sentence.lower())
-        for i, word in enumerate(words):
-            for j in range(i+1, min(i+1+window_size, len(words))):
-                co_occurrence[(word, words[j])] += 1
-                co_occurrence[(words[j], word)] += 1
-    return co_occurrence
-
-# Textrank 키워드 추출 함수 with GloVe
-def textrank_keywords_glove(title, abstract, top_n=5, embeddings=None):
+# Textrank 키워드 추출 함수 with GloVe (Word Position Importance 반영)
+def textrank_keywords_glove_with_position(title, abstract, top_n=5, beta=0.5, embeddings=None):
     # 제목과 초록을 합쳐서 문장으로 분할
     text = title + ' ' + abstract
     weighted_sentences = apply_weights(text)
@@ -739,8 +717,8 @@ def textrank_keywords_glove(title, abstract, top_n=5, embeddings=None):
     
     words = word_tokenize(text.lower())
     
-    # 단어의 TF 값 계산
-    tf = calculate_tf(text)
+    # 단어의 TF 값 계산 (Word Position Importance 반영)
+    tf = calculate_tf_with_position(title, abstract, beta=beta)
     
     # 공출현 빈도 계산
     co_occurrence = calculate_co_occurrence(sentences)
@@ -781,127 +759,184 @@ def textrank_keywords_glove(title, abstract, top_n=5, embeddings=None):
     
     return keywords
 
-# 추출된 키워드를 데이터 프레임에 추가
-df_filtered_51['extracted_keywords'] = df_filtered_51.apply(
-lambda row: textrank_keywords_glove(row['title'], row['abstract'], top_n=5, embeddings=glove_embeddings), axis=1)
-
-# 데이터 프레임 출력 (처음 5행)
-print(df_filtered_51[['abstract', 'keywords', 'extracted_keywords']])
+# 추출된 키워드를 데이터 프레임에 추가 (top_n을 각 행의 keywords 단어 개수로 설정)
+df_filtered_51['extracted_keywords'] = df_filtered_51.apply(lambda row: textrank_keywords_glove_with_position(
+        row['title'], row['abstract'], top_n=get_keyword_count(row['keywords']), beta=0.5,  # β 값은 필요에 따라 조정 가능
+        embeddings=glove_embeddings), axis=1)
 
 # Precision, Recall, F1 계산 함수
-df_filtered_51['metrics'] = df_filtered_51.apply(
-    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+def calculate_metrics(extracted_keywords, actual_keywords):
+    extracted_set = set(extracted_keywords)
+    actual_set = set(actual_keywords)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0.0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0.0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0.0
+    
+    return precision, recall, f1
 
+# 각 행에서 Precision, Recall, F1 계산
+df_filtered_51['metrics'] = df_filtered_51.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+# Precision, Recall, F1 값을 데이터프레임에 추가
 df_filtered_51[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_51['metrics'].tolist(), index=df_filtered_51.index)
 
-# ROUGE 점수 계산
+# ROUGE 점수 계산 함수
 scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
 
+def calculate_rouge(extracted_keywords, actual_keywords):
+    extracted_text = ' '.join(extracted_keywords)
+    actual_text = ' '.join(actual_keywords)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# 각 행에서 ROUGE 점수 계산
 df_filtered_51['rouge'] = df_filtered_51.apply(
-    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1
 )
 
+# ROUGE 점수를 데이터프레임에 추가
 df_filtered_51['rouge1'] = df_filtered_51['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_51['rouge2'] = df_filtered_51['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_51['rougeL'] = df_filtered_51['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result51 = df_filtered_51[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
+# 최종 결과 데이터프레임
+df_result51 = df_filtered_51[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 
 # 결과 출력
 print(df_result51)
 
 
-#### 6.textrank + term frequency, term postion, word co-occurence + Infomap
+#### 6.textrank + Infomap
+# CSV 파일 불러오기
 df_filtered_infomap = df_filtered.copy()
+df_filtered_infomap.dtypes
 
 # 공출현 계산 함수
-def calculate_co_occurrence(sentences, window_size=2):
+def calculate_co_occurrence(words, window_size=2):
     co_occurrence = Counter()
-    for sentence in sentences:
-        words = word_tokenize(sentence.lower())
-        for i, word in enumerate(words):
-            for j in range(i + 1, min(i + 1 + window_size, len(words))):
-                co_occurrence[(word, words[j])] += 1
-                co_occurrence[(words[j], word)] += 1
+    
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+            
     return co_occurrence
 
-# Infomap을 사용한 Textrank 키워드 추출 함수
-def infomap_textrank_keywords(title, abstract, top_n=5):
-    text = title + ' ' + abstract
-    sentences = sent_tokenize(text)
+# Infomap을 사용하여 커뮤니티별로 중요한 단어를 추출하는 함수 정의
+def infomap_keywords_extraction(text, top_n=5):
+    if not text or text.strip() == '':
+        return []
     
-    # 공출현 기반 유사도 행렬 계산
-    co_occurrence = calculate_co_occurrence(sentences)
-    similarity_matrix = np.zeros((len(sentences), len(sentences)))
+    # 텍스트를 단어로 분리
+    words = word_tokenize(text.lower())
     
-    for i, sentence_i in enumerate(sentences):
-        for j, sentence_j in enumerate(sentences):
-            if i == j:
-                continue
-            words_i = word_tokenize(sentence_i.lower())
-            words_j = word_tokenize(sentence_j.lower())
-            common_words = set(words_i) & set(words_j)
-            similarity = sum(co_occurrence[(word, word)] for word in common_words)
-            similarity_matrix[i][j] = similarity
-
-    # 네트워크 그래프 생성
-    nx_graph = nx.from_numpy_array(similarity_matrix)
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
     
-    # Infomap을 사용하여 모듈 찾기
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
     infomap = Infomap()
     
-    for i in range(len(sentences)):
-        infomap.add_node(i)
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        infomap.add_link(word_to_id[word1], word_to_id[word2], weight)
     
-    for i in range(len(sentences)):
-        for j in range(i + 1, len(sentences)):
-            if similarity_matrix[i][j] > 0:
-                infomap.add_link(i, j, similarity_matrix[i][j])
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
     
-    infomap.run()
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
     
-    # 모듈별로 중요한 단어 선택
-    keywords = []
-    for node in infomap.tree:
-        if node.is_leaf:
-            sentence_idx = node.node_id
-            words = word_tokenize(sentences[sentence_idx].lower())
-            word_freq = Counter(words)
-            module_keywords = [word for word, _ in word_freq.most_common(top_n)]
-            keywords.extend(module_keywords)
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
     
-    return list(set(keywords))
+    return extracted_keywords
 
-# DataFrame에 Infomap 기반 Textrank 키워드 추가
-df_filtered_infomap['extracted_keywords'] = df_filtered_infomap.apply(lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=5), axis=1)
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
 
-# 데이터 프레임 출력 (처음 5행)
+# DataFrame에 적용
+df_filtered_infomap['num_keywords'] = df_filtered_infomap['keywords'].apply(count_keywords)
+
+# Infomap을 사용하여 키워드를 추출하면서 각 행의 keywords 개수를 top_n으로 지정
+df_filtered_infomap['extracted_keywords'] = df_filtered_infomap.apply(lambda row: infomap_keywords_extraction(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
 print(df_filtered_infomap[['abstract', 'keywords', 'extracted_keywords']])
 
 # Precision, Recall, F1 계산 함수
-df_filtered_infomap['metrics'] = df_filtered_infomap.apply(
-    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+def calculate_metrics(extracted, actual):
+    extracted_set = set(extracted)
+    actual_set = set(actual)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+    
+    return precision, recall, f1
 
+# ROUGE 점수 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+
+def calculate_rouge(extracted, actual):
+    extracted_text = ' '.join(extracted)
+    actual_text = ' '.join(actual)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap['metrics'] = df_filtered_infomap.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1
+)
 df_filtered_infomap[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap['metrics'].tolist(), index=df_filtered_infomap.index)
 
-# ROUGE 점수 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-
+# ROUGE 점수 계산 및 데이터 프레임에 추가
 df_filtered_infomap['rouge'] = df_filtered_infomap.apply(
-    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1
 )
-
 df_filtered_infomap['rouge1'] = df_filtered_infomap['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_infomap['rouge2'] = df_filtered_infomap['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_infomap['rougeL'] = df_filtered_infomap['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result_infomap = df_filtered_infomap[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
+# 최종 결과 추출
+df_result_infomap = df_filtered_infomap[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 
+# 결과 출력
 print(df_result_infomap)
 
 
-#### 6.1 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
+#### 6.1 textrank + Infomap + GloVe 
 df_filtered_infomap_g = df_filtered.copy()
+df_filtered_infomap_g.dtypes
 
 # GloVe 임베딩 로드 함수
 def load_glove_embeddings(glove_file_path):
@@ -975,30 +1010,339 @@ def infomap_textrank_keywords(title, abstract, top_n=5, embeddings=None):
     
     return list(set(keywords))
 
-# DataFrame에 Infomap 기반 Textrank 키워드 추가
+# DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
+df_filtered_infomap_g['num_keywords'] = df_filtered_infomap_g['keywords'].apply(lambda x: len(x.split()))
+
+# Infomap을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
 df_filtered_infomap_g['extracted_keywords'] = df_filtered_infomap_g.apply(
-    lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=5, embeddings=glove_embeddings), axis=1)
+    lambda row: infomap_keywords_extraction(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
+    axis=1
+)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_g.drop(columns=['num_keywords'], inplace=True)
+
+# 데이터 프레임 출력 (처음 5행)
+print(df_filtered_infomap_g[['abstract', 'keywords', 'extracted_keywords']])
+df_filtered_infomap_g['keywords']
+df_filtered_infomap_g['extracted_keywords']
+
+# Precision, Recall, F1 계산 함수 적용
+df_filtered_infomap_g['metrics'] = df_filtered_infomap_g.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
 
 # Precision, Recall, F1 계산 함수
+def calculate_metrics(extracted, actual):
+    extracted_set = set(extracted)
+    actual_set = set(actual)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+    
+    return precision, recall, f1
+
+# 각 행에서 precision, recall, f1 계산
 df_filtered_infomap_g['metrics'] = df_filtered_infomap_g.apply(
-    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
 df_filtered_infomap_g[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_g['metrics'].tolist(), index=df_filtered_infomap_g.index)
 
-# ROUGE 점수 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+# ROUGE 점수 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
+def calculate_rouge(extracted, actual):
+    extracted_text = ' '.join(extracted)
+    actual_text = ' '.join(actual)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# 각 행에서 ROUGE 점수 계산
 df_filtered_infomap_g['rouge'] = df_filtered_infomap_g.apply(
-    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
 df_filtered_infomap_g['rouge1'] = df_filtered_infomap_g['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_infomap_g['rouge2'] = df_filtered_infomap_g['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_infomap_g['rougeL'] = df_filtered_infomap_g['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result_infomap_g = df_filtered_infomap_g[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
+# 최종 결과를 포함하는 데이터프레임 생성
+df_result_infomap_g = df_filtered_infomap_g[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 
 # 결과 출력
 print(df_result_infomap_g)
+
+#### 6.2 textrank + term frequency, term postion, word co-occurence + Infomap
+df_filtered_infomap_tpc = df_filtered.copy()
+df_filtered_infomap_tpc.dtypes
+
+# TF 계산 함수
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 계산 함수
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+    return co_occurrence
+
+# Infomap을 사용하여 커뮤니티별로 중요한 단어를 추출하는 함수 정의
+def infomap_keywords_extraction(title, abstract, top_n=5, beta=0.5):
+    if not title or not abstract or title.strip() == '' or abstract.strip() == '':
+        return []
+
+    # 텍스트를 문장으로 분리하고, 전체 단어로 분리
+    words_title = word_tokenize(title.lower())
+    words_abstract = word_tokenize(abstract.lower())
+    words = words_title + words_abstract
+
+    # TF 값 계산
+    tf = calculate_tf(abstract)
+
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+
+    # 노드와 엣지를 Infomap 구조에 추가
+    for i, word in enumerate(words):
+        for j in range(i + 1, len(words)):
+            weight = 1 if word in words_title else beta # 제목에 있는 단어일 경우 가중치를 1로 설정
+            if (word, words[j]) in co_occurrence:
+                infomap.add_link(word_to_id[word], word_to_id[words[j]], weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+
+    return extracted_keywords
+
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용
+df_filtered_infomap_tpc['num_keywords'] = df_filtered_infomap_tpc['keywords'].apply(count_keywords)
+
+# Infomap을 사용하여 키워드를 추출하면서 각 행의 keywords 개수를 top_n으로 지정
+df_filtered_infomap_tpc['extracted_keywords'] = df_filtered_infomap_tpc.apply(
+    lambda row: infomap_keywords_extraction(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_tpc[['abstract', 'keywords', 'extracted_keywords']])
+
+df_filtered_infomap_tpc['keywords']
+df_filtered_infomap_tpc['extracted_keywords']
+
+# Precision, Recall, F1 계산 함수
+def calculate_metrics(extracted, actual):
+    extracted_set = set(extracted)
+    actual_set = set(actual)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+    
+    return precision, recall, f1
+
+# ROUGE 점수 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+
+def calculate_rouge(extracted, actual):
+    extracted_text = ' '.join(extracted)
+    actual_text = ' '.join(actual)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# 각 행에 대해 계산 적용
+df_filtered_infomap_tpc['metrics'] = df_filtered_infomap_tpc.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1
+)
+
+df_filtered_infomap_tpc[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_tpc['metrics'].tolist(), index=df_filtered_infomap_tpc.index)
+
+df_filtered_infomap_tpc['rouge'] = df_filtered_infomap_tpc.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1
+)
+
+df_filtered_infomap_tpc['rouge1'] = df_filtered_infomap_tpc['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_tpc['rougeL'] = df_filtered_infomap_tpc['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+df_result_infomap_tpc = df_filtered_infomap_tpc[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_result_infomap_tpc)
+
+#### 6.3 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe 
+df_filtered_infomap_g_tpc = df_filtered.copy()
+df_filtered_infomap_g_tpc.dtypes
+
+# TF 계산 함수 (Word Position Importance 반영)
+def calculate_tf_with_position(title, abstract, beta=0.5):
+    words_title = word_tokenize(title.lower())
+    words_abstract = word_tokenize(abstract.lower())
+    doc_length = len(words_title) + len(words_abstract)
+    
+    # 제목에 있는 단어의 TF는 1, 초록에 있는 단어의 TF는 β로 설정
+    tf = {}
+    
+    for word in words_title:
+        tf[word] = tf.get(word, 0) + 1 / doc_length
+    
+    for word in words_abstract:
+        tf[word] = tf.get(word, 0) + beta / doc_length
+    
+    return tf
+
+# Infomap을 사용한 Textrank 키워드 추출 함수 (Word Position Importance 반영)
+def infomap_textrank_keywords_with_position(title, abstract, top_n=5, beta=0.5, embeddings=None):
+    text = title + ' ' + abstract
+    sentences = sent_tokenize(text)
+    
+    # 단어의 TF 값 계산 (Word Position Importance 반영)
+    tf = calculate_tf_with_position(title, abstract, beta=beta)
+    
+    # 유사도 행렬 계산
+    similarity_matrix = np.zeros((len(sentences), len(sentences)))
+    
+    for i, sentence_i in enumerate(sentences):
+        words_i = word_tokenize(sentence_i.lower())
+        for j, sentence_j in enumerate(sentences):
+            if i == j:
+                continue
+            words_j = word_tokenize(sentence_j.lower())
+            similarity = sum(word_similarity(word_i, word_j, embeddings) for word_i in words_i for word_j in words_j)
+            similarity_matrix[i][j] = similarity
+
+    # 네트워크 그래프 생성
+    nx_graph = nx.from_numpy_array(similarity_matrix)
+    
+    # Infomap을 사용하여 모듈 찾기
+    infomap = Infomap()
+    
+    for i in range(len(sentences)):
+        infomap.add_node(i)
+    
+    for i in range(len(sentences)):
+        for j in range(i + 1, len(sentences)):
+            if similarity_matrix[i][j] > 0:
+                infomap.add_link(i, j, similarity_matrix[i][j])
+    
+    infomap.run()
+    
+    # 모듈별로 중요한 단어 선택
+    keywords = []
+    for node in infomap.tree:
+        if node.is_leaf:
+            sentence_idx = node.node_id
+            words = word_tokenize(sentences[sentence_idx].lower())
+            word_freq = Counter(words)
+            module_keywords = [word for word, _ in word_freq.most_common(top_n)]
+            keywords.extend(module_keywords)
+    
+    return list(set(keywords))
+
+# DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
+df_filtered_infomap_g_tpc['num_keywords'] = df_filtered_infomap_g_tpc['keywords'].apply(lambda x: len(x.split()))
+
+# Infomap을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
+df_filtered_infomap_g_tpc['extracted_keywords'] = df_filtered_infomap_g_tpc.apply(
+    lambda row: infomap_textrank_keywords_with_position(
+        row['title'], 
+        row['abstract'], 
+        top_n=row['num_keywords'], 
+        beta=0.5,  # 필요에 따라 조정 가능한 β 값
+        embeddings=glove_embeddings
+    ) if pd.notnull(row['abstract']) else [],
+    axis=1
+)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_g_tpc.drop(columns=['num_keywords'], inplace=True)
+
+# 데이터 프레임 출력 (처음 5행)
+print(df_filtered_infomap_g_tpc[['abstract', 'keywords', 'extracted_keywords']])
+df_filtered_infomap_g_tpc['keywords']
+df_filtered_infomap_g_tpc['extracted_keywords']
+
+# Precision, Recall, F1 계산 함수
+def calculate_metrics(extracted, actual):
+    extracted_set = set(extracted)
+    actual_set = set(actual)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if (true_positive + false_positive) > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if (true_positive + false_negative) > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+    
+    return precision, recall, f1
+
+# ROUGE 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+
+def calculate_rouge(extracted, actual):
+    extracted_text = ' '.join(extracted)
+    actual_text = ' '.join(actual)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# Precision, Recall, F1 계산
+df_filtered_infomap_g_tpc['metrics'] = df_filtered_infomap_g_tpc.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_g_tpc[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_g_tpc['metrics'].tolist(), index=df_filtered_infomap_g_tpc.index)
+
+# ROUGE 점수 계산
+df_filtered_infomap_g_tpc['rouge'] = df_filtered_infomap_g_tpc.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_g_tpc['rouge1'] = df_filtered_infomap_g_tpc['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_g_tpc['rougeL'] = df_filtered_infomap_g_tpc['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 데이터프레임
+df_result_infomap_g_tpc = df_filtered_infomap_g_tpc[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_result_infomap_g_tpc)
 
 
 #### 7. textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
@@ -1018,8 +1362,7 @@ def create_co_occurrence_graph(sentences, window_size=2):
     return graph
 
 # 확장된 Infomap 기반 키워드 추출 함수
-# Infomap 기반 키워드 추출 함수 (계층적 구조 반영)
-def hierarchical_infomap_keywords(title, abstract, top_n=5):
+def hierarchical_infomap_keywords(title, abstract, top_n=5, beta=0.5):
     text = title + ' ' + abstract
     sentences = sent_tokenize(text)
 
@@ -1051,7 +1394,12 @@ def hierarchical_infomap_keywords(title, abstract, top_n=5):
     # 모듈별로 단어 점수를 계산
     module_scores = {}
     for node, module_id in module_assignments.items():
-        node_score = sum([graph[node][nbr]['weight'] for nbr in graph.neighbors(node)])
+        # node가 제목에 있으면 가중치 1, 초록에 있으면 가중치 beta
+        if node in word_tokenize(title.lower()):
+            node_score = sum([graph[node][nbr]['weight'] * 1 for nbr in graph.neighbors(node)])
+        else:
+            node_score = sum([graph[node][nbr]['weight'] * beta for nbr in graph.neighbors(node)])
+
         if module_id in module_scores:
             module_scores[module_id].append((node, node_score))
         else:
@@ -1066,8 +1414,26 @@ def hierarchical_infomap_keywords(title, abstract, top_n=5):
 
     return list(set(hierarchical_keywords))
 
-# 추출된 키워드를 데이터 프레임에 추가
-df_filtered_infomap_h['extracted_keywords'] = df_filtered_infomap_h.apply(lambda row: hierarchical_infomap_keywords(row['title'], row['abstract'], top_n=5), axis=1)
+# 각 행의 'keywords'에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용하여 'num_keywords' 열 추가
+df_filtered_infomap_h['num_keywords'] = df_filtered_infomap_h['keywords'].apply(count_keywords)
+
+# 추출된 키워드를 데이터 프레임에 추가하면서 각 행의 keywords 개수를 top_n으로 지정
+df_filtered_infomap_h['extracted_keywords'] = df_filtered_infomap_h.apply(
+    lambda row: hierarchical_infomap_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [],
+    axis=1)
+
+# 필요에 따라 'num_keywords' 열을 제거할 수 있습니다
+df_filtered_infomap_h.drop(columns=['num_keywords'], inplace=True)
+
+# 데이터 프레임 출력 (처음 5행)
+print(df_filtered_infomap_h[['abstract', 'keywords', 'extracted_keywords']])
+
+df_filtered_infomap_h['keywords']
+df_filtered_infomap_h['extracted_keywords']
 
 # Precision, Recall, F1 계산 함수
 def calculate_metrics(extracted, actual):
@@ -1084,12 +1450,17 @@ def calculate_metrics(extracted, actual):
     
     return precision, recall, f1
 
-df_filtered_infomap_h['metrics'] = df_filtered_infomap_h.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# 각 행에 대해 metrics 계산
+df_filtered_infomap_h['metrics'] = df_filtered_infomap_h.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
+# Precision, Recall, F1 점수를 DataFrame으로 변환
 df_filtered_infomap_h[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_h['metrics'].tolist(), index=df_filtered_infomap_h.index)
 
-# ROUGE 점수 계산 함수
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+from rouge_score import rouge_scorer
+
+# ROUGE 스코어러 초기화
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
 
 def calculate_rouge(extracted, actual):
     extracted_text = ' '.join(extracted)
@@ -1097,14 +1468,15 @@ def calculate_rouge(extracted, actual):
     scores = scorer.score(actual_text, extracted_text)
     return scores
 
-df_filtered_infomap_h['rouge'] = df_filtered_infomap_h.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+# 각 행에 대해 ROUGE 점수 계산
+df_filtered_infomap_h['rouge'] = df_filtered_infomap_h.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
 # ROUGE 점수를 DataFrame에 추가
 df_filtered_infomap_h['rouge1'] = df_filtered_infomap_h['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_infomap_h['rouge2'] = df_filtered_infomap_h['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_infomap_h['rougeL'] = df_filtered_infomap_h['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result_infomap_h = df_filtered_infomap_h[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
+df_result_infomap_h = df_filtered_infomap_h[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 
 # 결과 출력
 print(df_result_infomap_h)
@@ -1128,8 +1500,8 @@ def calculate_co_occurrence(sentences, window_size=2):
 def calculate_entropy(prob_dist):
     return -np.sum(prob_dist * np.log(prob_dist + 1e-9))
 
-# 확장된 Infomap 기반 키워드 추출 함수 (확장된 방정식 반영)
-def infomap_textrank_keywords_extended(title, abstract, top_n=5):
+# 확장된 Infomap 기반 키워드 추출 함수 (확장된 방정식 반영 및 Word Position 반영)
+def infomap_textrank_keywords_extended(title, abstract, top_n=5, beta=0.5):
     text = title + ' ' + abstract
     sentences = sent_tokenize(text)
     
@@ -1166,7 +1538,7 @@ def infomap_textrank_keywords_extended(title, abstract, top_n=5):
     # 각 모듈의 엔트로피를 계층적으로 계산 및 가중치 적용
     module_scores = {}
     for node in infomap.tree:
-        if node.is_leaf:
+        if node.isLeaf:
             sentence_idx = node.node_id
             words = word_tokenize(sentences[sentence_idx].lower())
             word_freq = Counter(words)
@@ -1174,11 +1546,21 @@ def infomap_textrank_keywords_extended(title, abstract, top_n=5):
             entropy = calculate_entropy(prob_dist)
             module_id = node.moduleIndex()
 
+            # Word Position 가중치 적용
+            word_weights = []
+            for word in words:
+                if word in word_tokenize(title.lower()):
+                    word_weights.append(1)  # 제목에 포함된 단어
+                elif word in word_tokenize(abstract.lower()):
+                    word_weights.append(beta)  # 초록에 포함된 단어
+                else:
+                    word_weights.append(0)
+
             # 확장 방정식에 따른 가중치 적용
             p_i_star = sum(word_freq.values()) / len(words)
             H_Q = calculate_entropy(prob_dist)
             H_Pi = entropy
-            module_weight = p_i_star * (H_Q + H_Pi)
+            module_weight = p_i_star * (H_Q + H_Pi) * np.mean(word_weights)
 
             if module_id in module_scores:
                 module_scores[module_id].append((sentence_idx, module_weight))
@@ -1194,36 +1576,67 @@ def infomap_textrank_keywords_extended(title, abstract, top_n=5):
     
     return list(set(hierarchical_keywords))
 
-# DataFrame에 확장된 Infomap 기반 Textrank 키워드 추가
-df_filtered_infomap_m['extracted_keywords'] = df_filtered_infomap_m.apply(lambda row: infomap_textrank_keywords_extended(row['title'], row['abstract'], top_n=5), axis=1)
+# 단어 개수를 세는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# 각 행의 keywords 개수로 top_n 설정
+df_filtered_infomap_m['num_keywords'] = df_filtered_infomap_m['keywords'].apply(count_keywords)
+
+# DataFrame에 확장된 Infomap 기반 Textrank 키워드를 추가
+df_filtered_infomap_m['extracted_keywords'] = df_filtered_infomap_m.apply(
+    lambda row: infomap_textrank_keywords_extended(
+        row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5
+    ), axis=1)
+
+# 필요에 따라 'num_keywords' 열을 제거할 수 있습니다
+df_filtered_infomap_m.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_m[['abstract', 'keywords', 'extracted_keywords']])
+
 
 # Precision, Recall, F1 계산 함수
-df_filtered_infomap_m['metrics'] = df_filtered_infomap_m.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
+def calculate_metrics(extracted, actual):
+    extracted_set = set(extracted)
+    actual_set = set(actual)
+    
+    true_positive = len(extracted_set & actual_set)
+    false_positive = len(extracted_set - actual_set)
+    false_negative = len(actual_set - extracted_set)
+    
+    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0
+    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+    
+    return precision, recall, f1
+
+# ROUGE 점수 계산 함수
+scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
+
+def calculate_rouge(extracted, actual):
+    extracted_text = ' '.join(extracted)
+    actual_text = ' '.join(actual)
+    scores = scorer.score(actual_text, extracted_text)
+    return scores
+
+# Precision, Recall, F1 및 ROUGE 점수 계산
+df_filtered_infomap_m['metrics'] = df_filtered_infomap_m.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
 df_filtered_infomap_m[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_m['metrics'].tolist(), index=df_filtered_infomap_m.index)
 
-
-# Precision, Recall, F1 계산 함수
-df_filtered_infomap_m['metrics'] = df_filtered_infomap_m.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split(', ')), axis=1)
-
-df_filtered_infomap_m[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_m['metrics'].tolist(), index=df_filtered_infomap.index)
-
-# ROUGE 점수 계산
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
-
 df_filtered_infomap_m['rouge'] = df_filtered_infomap_m.apply(
-    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split(', ')), axis=1
-)
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
 
 df_filtered_infomap_m['rouge1'] = df_filtered_infomap_m['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-df_filtered_infomap_m['rouge2'] = df_filtered_infomap_m['rouge'].apply(lambda x: x['rouge2'].fmeasure)
 df_filtered_infomap_m['rougeL'] = df_filtered_infomap_m['rouge'].apply(lambda x: x['rougeL'].fmeasure)
 
-df_result_infomap_m = df_filtered_infomap_m[['precision', 'recall', 'f1', 'rouge1', 'rouge2', 'rougeL']]
+# 최종 결과 DataFrame
+df_result_infomap_m = df_filtered_infomap_m[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
 
 # 결과 출력
 print(df_result_infomap_m)
-
 
 
 
@@ -1235,47 +1648,53 @@ print(df_result5) #### 5. textrank + term frequency, term postion, word co-occur
 print(df_result51) #### 5.1 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
 print(df_result_infomap) #### 6.textrank + term frequency, term postion, word co-occurence + Infomap
 print(df_result_infomap_g) #### 6.1 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
+print(df_result_infomap_tpc) #### 6.2 textrank + term frequency, term postion, word co-occurence + Infomap
+print(df_result_infomap_g_tpc) #### 6.3 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe 
 print(df_result_infomap_h) #### 7. textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
 print(df_result_infomap_m) #### 8. textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy
 
 
 
+# 각 DataFrame의 평균 계산 함수
+def calculate_means(df):
+    means = df.mean()
+    return means
 
-# 각 DataFrame의 합계 계산 함수
-def calculate_sums(df):
-    sums = df.sum()
-    return sums
+# 각 DataFrame의 평균 계산
+means_result1 = calculate_means(df_result1)
+means_result2 = calculate_means(df_result2)
+means_result3 = calculate_means(df_result3)
+means_result4 = calculate_means(df_result4)
+means_result5 = calculate_means(df_result5)
+means_result51 = calculate_means(df_result51)
+means_result_infomap = calculate_means(df_result_infomap)
+means_result_infomap_g = calculate_means(df_result_infomap_g)
+means_result_infomap_tpc = calculate_means(df_result_infomap_tpc) 
+means_result_infomap_g_tpc = calculate_means(df_result_infomap_g_tpc)
+means_result_infomap_h = calculate_means(df_result_infomap_h)
+means_result_infomap_m = calculate_means(df_result_infomap_m)
 
-# 각 DataFrame의 합계 계산
-sums_result1 = calculate_sums(df_result1)
-sums_result2 = calculate_sums(df_result2)
-sums_result3 = calculate_sums(df_result3)
-sums_result4 = calculate_sums(df_result4)
-sums_result5 = calculate_sums(df_result5)
-sums_result51 = calculate_sums(df_result51)
-sums_result_infomap = calculate_sums(df_result_infomap)
-sums_result_infomap_g = calculate_sums(df_result_infomap_g)
-sums_result_infomap_h = calculate_sums(df_result_infomap_h)
-sums_result_infomap_m = calculate_sums(df_result_infomap_m)
-
-# 합계 결과를 사전으로 변환
-sums_dict = {
-    "result1": sums_result1,
-    "result2": sums_result2,
-    "result3": sums_result3,
-    "result4": sums_result4,
-    "result5": sums_result5,
-    "result51": sums_result51,
-    "infomap": sums_result_infomap,
-    "infomap_g": sums_result_infomap_g,
-    "infomap_h": sums_result_infomap_h,
-    "infomap_m": sums_result_infomap_m
+# 평균 결과를 사전으로 변환
+means_dict = {
+    "result1": means_result1,
+    "result2": means_result2,
+    "result3": means_result3,
+    "result4": means_result4,
+    "result5": means_result5,
+    "result51": means_result51,
+    "infomap": means_result_infomap,
+    "infomap_g": means_result_infomap_g,
+    "infomap_tpc": means_result_infomap_tpc,
+    "infomap_g_tpc": means_result_infomap_g_tpc,
+    "infomap_h": means_result_infomap_h,
+    "infomap_m": means_result_infomap_m
 }
 
 # 사전을 DataFrame으로 변환
-summary_df = pd.DataFrame(sums_dict)
+summary_df = pd.DataFrame(means_dict)
 
 # 전치 (Transpose)하여 인덱스가 행으로, 열이 컬럼으로 되게 변환
 summary_df = summary_df.T
-# 필요시 전처리된 데이터를 CSV 파일로 저장
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result.csv', index=False)
+
+# summary_df를 CSV 파일로 저장
+summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000.csv', index=False)

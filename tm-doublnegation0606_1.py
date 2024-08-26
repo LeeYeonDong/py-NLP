@@ -136,7 +136,6 @@ mitigators = [
     "virtually", "practically", "somehow", "arguably", "occasionally", "periodically"
 ]
 
-
 # BERT 임베딩 및 어텐션 가중치 계산 함수
 def get_sentence_embedding_and_attention(sentence):
     inputs = tokenizer(sentence, return_tensors='pt', truncation=True, max_length=512)
@@ -198,17 +197,6 @@ time.sleep(10)
 
 
 # DN_attention_etc
-# 부정어 목록 정의
-negations = ["not", "no", "never", "none", "nothing", "neither", "nobody", "nowhere", "hardly", "barely", "scarcely"]
-
-mitigators = [
-    "possible", "might", "could", "may", "perhaps", "seems", "potentially",
-    "likely", "approximately", "around", "roughly", "almost", "nearly",
-    "sort of", "kind of", "relatively", "fairly", "somewhat", "moderately",
-    "usually", "generally", "often", "frequently", "typically", "probably",
-    "virtually", "practically", "somehow", "arguably", "occasionally", "periodically"
-]
-
 # 단어 빈도 계산 함수
 def get_most_frequent_words(text, top_n=10):
     stop_words = set(stopwords.words('english'))
@@ -235,12 +223,21 @@ def get_sentence_embedding_and_attention(sentence):
     embedding = outputs.last_hidden_state.mean(dim=1).squeeze().detach().numpy()
     return embedding, attention
 
+# 두 부정어 사이의 거리 계산 함수
+def calculate_negation_distance(sentence):
+    words = word_tokenize(sentence)
+    negation_indices = [i for i, word in enumerate(words) if word.lower() in negations]
+    if len(negation_indices) < 2:
+        return 0
+    distances = [negation_indices[i + 1] - negation_indices[i] for i in range(len(negation_indices) - 1)]
+    return max(distances)
+
 # 문장 가중치 계산 함수
 def calculate_weight(sentence, attention, position, total_sentences):
     weight = attention.mean() if attention is not None else 0
-    negation_count = sum(1 for neg in negations if neg in sentence)
-    if negation_count >= 2:  # 이중 부정 체크
-        weight += 0.3
+    negation_distance = calculate_negation_distance(sentence)
+    if negation_distance > 0:  # 이중 부정 체크
+        weight += 0.3 + (negation_distance * 0.01)  # 거리에 비례한 가중치 추가
     for mitigator in mitigators:
         if mitigator in sentence:
             weight += 0.2
@@ -250,6 +247,8 @@ def calculate_weight(sentence, attention, position, total_sentences):
             weight += 0.1
             break
     if position == 0 or position == total_sentences - 1:  # 첫 번째 문장 또는 마지막 문장
+        weight += 0.1
+    if len(sentence.split()) > 20:  # 길이가 긴 문장
         weight += 0.1
     return weight
 
@@ -284,8 +283,113 @@ combined_data = [f"{score:.4f}: {sentence}" for score, sentence in ranked_senten
 # 데이터 프레임 생성 (단일 열)
 df_DN_attention_etc = pd.DataFrame(combined_data, columns=['DN_attention_etc'])
 
+
+
+
+# 추가 Watts-Strogatz 모델
+# 단어 빈도 계산 함수
+def get_most_frequent_words(text, top_n=10):
+    stop_words = set(stopwords.words('english'))
+    words = word_tokenize(text.lower())
+    words = [word for word in words if word.isalnum() and word not in stop_words]
+    word_freq = Counter(words)
+    most_common_words = [word for word, freq in word_freq.most_common(top_n)]
+    return most_common_words
+
+# 텍스트에서 가장 빈번한 단어 추출
+important_keywords = get_most_frequent_words(paragraph, top_n=10)
+print(f"Important Keywords: {important_keywords}")
+
+# BERT 임베딩 및 어텐션 가중치 계산 함수
+def get_sentence_embedding_and_attention(sentence):
+    inputs = tokenizer(sentence, return_tensors='pt', truncation=True, max_length=512)
+    outputs = model(**inputs)
+    
+    if outputs.attentions:
+        attention = outputs.attentions[-1].mean(dim=1).squeeze().detach().numpy()
+    else:
+        attention = None
+
+    embedding = outputs.last_hidden_state.mean(dim=1).squeeze().detach().numpy()
+    return embedding, attention
+
+# 두 부정어 사이의 거리 계산 함수
+def calculate_negation_distance(sentence):
+    words = word_tokenize(sentence)
+    negation_indices = [i for i, word in enumerate(words) if word.lower() in negations]
+    if len(negation_indices) < 2:
+        return 0
+    distances = [negation_indices[i + 1] - negation_indices[i] for i in range(len(negation_indices) - 1)]
+    return max(distances)
+
+# 문장 가중치 계산 함수
+def calculate_weight(sentence, attention, position, total_sentences):
+    weight = attention.mean() if attention is not None else 0
+    negation_distance = calculate_negation_distance(sentence)
+    if negation_distance > 0:  # 이중 부정 체크
+        weight += 0.3 + (negation_distance * 0.01)  # 거리에 비례한 가중치 추가
+    for mitigator in mitigators:
+        if mitigator in sentence:
+            weight += 0.2
+            break
+    for keyword in important_keywords:
+        if keyword in sentence:
+            weight += 0.1
+            break
+    if position == 0 or position == total_sentences - 1:  # 첫 번째 문장 또는 마지막 문장
+        weight += 0.1
+    if len(sentence.split()) > 20:  # 길이가 긴 문장
+        weight += 0.1
+    return weight
+
+# Watts-Strogatz 모델을 사용한 네트워크 생성 함수
+def create_watts_strogatz_graph(num_nodes, k, p):
+    # 완전 격자 그래프 생성
+    G = nx.watts_strogatz_graph(num_nodes, k, p)
+    return G
+
+# 1. BERT 임베딩 및 어텐션 가중치 계산
+sentence_embeddings = []
+attention_scores = []
+
+for i, sentence in enumerate(sentences):
+    embedding, attention = get_sentence_embedding_and_attention(sentence)
+    sentence_embeddings.append(embedding)
+    attention_scores.append(calculate_weight(sentence, attention, i, len(sentences)))
+
+sentence_embeddings = np.array(sentence_embeddings)
+
+# 2. 유사도 행렬 계산
+similarity_matrix = cosine_similarity(sentence_embeddings)
+
+# 3. Watts-Strogatz 네트워크 생성
+num_sentences = len(sentences)
+G = create_watts_strogatz_graph(num_sentences, k=4, p=0.1)
+
+# 4. 유사도 행렬 기반으로 가중치 추가
+for i in range(num_sentences):
+    for j in range(num_sentences):
+        if i != j and similarity_matrix[i][j] > 0:
+            G.add_edge(i, j, weight=similarity_matrix[i][j])
+
+# 5. TextRank 계산 (가중치 적용)
+initial_scores = np.array(attention_scores)
+scores = nx.pagerank(G, personalization=dict(enumerate(initial_scores)))
+
+# 6. 결과 출력
+ranked_sentences = sorted(((scores[i], s) for i, s in enumerate(sentences)), reverse=True)
+print("중요한 문장:")
+for score, sentence in ranked_sentences:
+    print(f"{score:.4f}: {sentence}")
+
+# 점수와 문장을 결합하여 새로운 리스트 생성
+combined_data = [f"{score:.4f}: {sentence}" for score, sentence in ranked_sentences]
+
+# 데이터 프레임 생성 (단일 열)
+df_DN_attention_etc_ws = pd.DataFrame(combined_data, columns=['DN_attention_etc_ws'])
+
 # 데이터 프레임을 리스트로 저장
-dfs = [df_textrank, df_attention, df_DN_attention, df_DN_attention_etc]
+dfs = [df_textrank, df_attention, df_DN_attention, df_DN_attention_etc, df_DN_attention_etc_ws]
 
 # 데이터 프레임 행으로 결합
 combined_df = pd.concat(dfs, axis=1)
@@ -293,3 +397,6 @@ combined_df = pd.concat(dfs, axis=1)
 # 엑셀 파일로 저장
 excel_filename = 'D:/대학원/논문/Double Negation/result.xlsx'
 combined_df.to_excel(excel_filename, index=False)
+
+
+

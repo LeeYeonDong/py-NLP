@@ -1,8 +1,9 @@
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
 from nltk.corpus import stopwords
+from rouge_score import rouge_scorer
 import numpy as np
-import math
+
 
 # NLTK 데이터 다운로드 (최초 실행 시)
 nltk.download('punkt')
@@ -139,7 +140,7 @@ def sentence_similarity(si, sj):
     similarity = len(common_words) / (math.log(len(words_si) + 1) + math.log(len(words_sj) + 1))
     return similarity
 
-# 성능 지표 계산 함수
+# precision, recall, f1 성능 지표 계산 함수
 def calculate_metrics(predicted_sentences, actual_sentences):
     true_positive = 0
     false_positive = 0
@@ -172,6 +173,26 @@ def calculate_metrics(predicted_sentences, actual_sentences):
     f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
     
     return precision, recall, f1
+
+# ROUGE 점수 계산 함수
+def calculate_rouge(predicted_sentences, actual_sentences):
+    scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
+    scores = {'rouge1': [], 'rouge2': [], 'rougeL': []}
+    
+    for pred in predicted_sentences:
+        max_scores = {'rouge1': 0, 'rouge2': 0, 'rougeL': 0}
+        for actual in actual_sentences:
+            score = scorer.score(pred, actual)
+            max_scores = {key: max(max_scores[key], score[key].fmeasure) for key in max_scores}
+        for key in scores:
+            scores[key].append(max_scores[key])
+    
+    avg_scores = {key: np.mean(scores[key]) for key in scores}
+    return avg_scores
+
+# ROUGE 점수 계산
+rouge_scores = calculate_rouge(predicted_sentences_textrank, actual_sentences)
+
 
 # 성능 지표 계산
 precision_textrank, recall_textrank, f1_textrank = calculate_metrics(predicted_sentences_textrank, actual_sentences)
