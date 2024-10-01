@@ -153,10 +153,10 @@ def apply_metrics(df):
     return df
 
 
-#### 1.1 textrank
+#### M01 textrank
 time.sleep(3)
-df_filtered_11 = df_filtered.copy()
-df_filtered_11.dtypes
+df_filtered_01 = df_filtered.copy()
+df_filtered_01.dtypes
 
 # Textrank 키워드 추출 함수
 def textrank_keywords(text, top_n=5):
@@ -178,29 +178,30 @@ def textrank_keywords(text, top_n=5):
     return list(set(keywords))[:top_n]
 
 # 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
-df_filtered_11['num_keywords'] = df_filtered_11['keywords'].apply(lambda x: len(x.split()))
+df_filtered_01['num_keywords'] = df_filtered_01['keywords'].apply(lambda x: len(x.split()))
 
 # 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
-df_filtered_11['extracted_keywords'] = df_filtered_11.apply(
+df_filtered_01['extracted_keywords'] = df_filtered_01.apply(
     lambda row: textrank_keywords(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_11[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_01[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_11 = apply_metrics(df_filtered_11)
+df_filtered_01 = apply_metrics(df_filtered_01)
 
 # 최종 결과 출력
-df_result11 = df_filtered_11[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result01 = df_filtered_01[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 1.2 textrank + term frequency, term postion, word co-occurence
+
+#### M02 textrank + term frequency, term postion, word co-occurence
 time.sleep(3)
-df_filtered_12 = df_filtered.copy()
-df_filtered_12.dtypes
+df_filtered_02 = df_filtered.copy()
+df_filtered_02.dtypes
 
 # TF 계산 함수
 def calculate_tf(text):
@@ -264,25 +265,26 @@ def textrank_keywords(title, abstract, top_n=5, beta=0.5):
     return list(set(keywords))[:top_n]
 
 # 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
-df_filtered_12['num_keywords'] = df_filtered_12['keywords'].apply(lambda x: len(x.split()))
+df_filtered_02['num_keywords'] = df_filtered_02['keywords'].apply(lambda x: len(x.split()))
 
 # 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
-df_filtered_12['extracted_keywords'] = df_filtered_12.apply( lambda row: textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [], axis=1)
+df_filtered_02['extracted_keywords'] = df_filtered_02.apply( lambda row: textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [], axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_12[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_02[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_12 = apply_metrics(df_filtered_12)
+df_filtered_02 = apply_metrics(df_filtered_02)
 
 # 최종 결과 출력
-df_result12 = df_filtered_12[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result02 = df_filtered_02[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 1.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting 
+
+#### M03 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting 
 time.sleep(3)
-df_filtered_13 = df_filtered.copy()
+df_filtered_03 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
 def apply_weights(text):
@@ -386,7 +388,7 @@ def get_keyword_count(keywords):
     return len(keywords.split())
 
 # 추출된 키워드를 데이터 프레임에 추가 (top_n을 각 행의 keywords 단어 개수로 설정)
-df_filtered_13['extracted_keywords'] = df_filtered_13.apply(
+df_filtered_03['extracted_keywords'] = df_filtered_03.apply(
     lambda row: textrank_keywords(
         row['title'], 
         row['abstract'], 
@@ -397,19 +399,20 @@ df_filtered_13['extracted_keywords'] = df_filtered_13.apply(
 )
 
 # 데이터 프레임 출력 (처음 5행)
-print(df_filtered_13[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_03[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_13 = apply_metrics(df_filtered_13)
+df_filtered_03 = apply_metrics(df_filtered_03)
 
 # 최종 결과 출력
-df_result13 = df_filtered_13[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result03 = df_filtered_03[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 1.4 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
+
+#### M04 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
 time.sleep(3)
-df_filtered_14 = df_filtered.copy()
+df_filtered_04 = df_filtered.copy()
 
 # 단어 간 유사도 계산 함수 (GloVe 사용)
 def word_similarity(word1, word2, embeddings):
@@ -530,24 +533,25 @@ def textrank_keywords_glove_with_position(title, abstract, top_n=5, beta=0.5, em
     return keywords
 
 # 추출된 키워드를 데이터 프레임에 추가 (top_n을 각 행의 keywords 단어 개수로 설정)
-df_filtered_14['extracted_keywords'] = df_filtered_14.apply(lambda row: textrank_keywords_glove_with_position(
+df_filtered_04['extracted_keywords'] = df_filtered_04.apply(lambda row: textrank_keywords_glove_with_position(
         row['title'], row['abstract'], top_n=get_keyword_count(row['keywords']), beta=0.5,  # β 값은 필요에 따라 조정 가능
         embeddings=glove_embeddings), axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_14[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_04[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_14 = apply_metrics(df_filtered_14)
+df_filtered_04 = apply_metrics(df_filtered_04)
 
 # 최종 결과 출력
-df_result14 = df_filtered_14[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result04 = df_filtered_04[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 2. textrank + TP-CoGlo-TextRank(GLove)
+
+#### M05 textrank + TP-CoGlo-TextRank(GLove)
 time.sleep(3)
-df_filtered_2 = df_filtered.copy()
+df_filtered_05 = df_filtered.copy()
 
 # 단어 간 유사도 계산 함수 (GloVe 사용)
 def word_similarity(word1, word2, embeddings):
@@ -602,26 +606,27 @@ def tp_coglo_textrank(text, top_n=5, embeddings=None):
     return keywords
 
 # 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
-df_filtered_2['num_keywords'] = df_filtered_2['keywords'].apply(lambda x: len(x.split()))
+df_filtered_05['num_keywords'] = df_filtered_05['keywords'].apply(lambda x: len(x.split()))
 
 # 'num_keywords'를 top_n으로 사용하여 'extracted_keywords' 생성
-df_filtered_2['extracted_keywords'] = df_filtered_2.apply(lambda row: tp_coglo_textrank(row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [], axis=1)
+df_filtered_05['extracted_keywords'] = df_filtered_05.apply(lambda row: tp_coglo_textrank(row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [], axis=1)
 
 # 데이터 프레임 출력 (처음 5행)
-print(df_filtered_2[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_05[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_2 = apply_metrics(df_filtered_2)
+df_filtered_05 = apply_metrics(df_filtered_05)
 
 # 최종 결과 출력
-df_result2 = df_filtered_2[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result05 = df_filtered_05[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 3. textrank + Watts-Strogatz model
+
+#### 06. textrank + Watts-Strogatz model
 time.sleep(3)
-df_filtered_3 = df_filtered.copy()
-df_filtered_3.dtypes
+df_filtered_06 = df_filtered.copy()
+df_filtered_06.dtypes
 
 # Watts-Strogatz 그래프를 생성하는 함수
 def construct_ws_graph(words, p=0.1, k=4):
@@ -654,26 +659,27 @@ def calculate_ws_weight(text, top_n=5):
     return keywords
 
 # 각 행의 'keywords'에서 단어 개수를 계산하여 'num_keywords' 열 생성
-df_filtered_3['num_keywords'] = df_filtered_3['keywords'].apply(lambda x: len(x.split()))
+df_filtered_06['num_keywords'] = df_filtered_06['keywords'].apply(lambda x: len(x.split()))
 
 # 데이터 프레임에 추출된 키워드를 추가
-df_filtered_3['extracted_keywords'] = df_filtered_3.apply(lambda row: calculate_ws_weight(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
+df_filtered_06['extracted_keywords'] = df_filtered_06.apply(lambda row: calculate_ws_weight(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_3[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_06[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_3 = apply_metrics(df_filtered_3)
+df_filtered_06 = apply_metrics(df_filtered_06)
 
 # 최종 결과 출력
-df_result3 = df_filtered_3[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result06 = df_filtered_06[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 4.1 textrank + Infomap
+
+#### M07 textrank + Infomap
 time.sleep(3)
-df_filtered_41 = df_filtered.copy()
-df_filtered_41.dtypes
+df_filtered_07 = df_filtered.copy()
+df_filtered_07.dtypes
 
 # Infomap을 사용한 Textrank 키워드 추출 함수 (임베딩 제외)
 def infomap_textrank_keywords(title, abstract, top_n=5):
@@ -723,31 +729,32 @@ def infomap_textrank_keywords(title, abstract, top_n=5):
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_41['num_keywords'] = df_filtered_41['keywords'].apply(lambda x: len(x.split()))
+df_filtered_07['num_keywords'] = df_filtered_07['keywords'].apply(lambda x: len(x.split()))
 
 # Infomap을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_41['extracted_keywords'] = df_filtered_41.apply(
+df_filtered_07['extracted_keywords'] = df_filtered_07.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # num_keywords 열은 필요 없으면 제거
-df_filtered_41.drop(columns=['num_keywords'], inplace=True)
+df_filtered_07.drop(columns=['num_keywords'], inplace=True)
 
 # 데이터 프레임 출력 
-print(df_filtered_41[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_07[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_41 = apply_metrics(df_filtered_41)
+df_filtered_07 = apply_metrics(df_filtered_07)
 
 # 최종 결과 출력
-df_result41 = df_filtered_41[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result07 = df_filtered_07[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 4.2 textrank + term frequency, term postion, word co-occurence + Infomap
-df_filtered_42 = df_filtered.copy()
-df_filtered_42.dtypes
+
+#### M08 textrank + term frequency, term postion, word co-occurence + Infomap
+df_filtered_08 = df_filtered.copy()
+df_filtered_08.dtypes
 
 # TF 계산 함수
 def calculate_tf(text):
@@ -826,26 +833,27 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # DataFrame에 적용
-df_filtered_42['num_keywords'] = df_filtered_42['keywords'].apply(count_keywords)
+df_filtered_08['num_keywords'] = df_filtered_08['keywords'].apply(count_keywords)
 
 # Infomap을 사용하여 키워드를 추출하면서 각 행의 keywords 개수를 top_n으로 지정
-df_filtered_42['extracted_keywords'] = df_filtered_42.apply(
+df_filtered_08['extracted_keywords'] = df_filtered_08.apply(
     lambda row: infomap_keywords_extraction(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_42[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_08[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_42 = apply_metrics(df_filtered_42)
+df_filtered_08 = apply_metrics(df_filtered_08)
 
 # 최종 결과 출력
-df_result42 = df_filtered_42[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result08 = df_filtered_08[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 4.3 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges
-df_filtered_43 = df_filtered.copy()
-df_filtered_43.dtypes
+
+#### M09 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges
+df_filtered_09 = df_filtered.copy()
+df_filtered_09.dtypes
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
 def apply_weights(text):
@@ -964,7 +972,7 @@ def get_keyword_count(keywords):
     return len(keywords.split())
 
 # 추출된 키워드를 데이터 프레임에 추가 (top_n을 각 행의 keywords 단어 개수로 설정)
-df_filtered_43['extracted_keywords'] = df_filtered_43.apply(
+df_filtered_09['extracted_keywords'] = df_filtered_09.apply(
     lambda row: infomap_textrank_keywords(
         row['title'], 
         row['abstract'], 
@@ -975,19 +983,20 @@ df_filtered_43['extracted_keywords'] = df_filtered_43.apply(
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_43[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_09[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_43 = apply_metrics(df_filtered_43)
+df_filtered_09 = apply_metrics(df_filtered_09)
 
 # 최종 결과 출력
-df_result43 = df_filtered_43[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result09 = df_filtered_09[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 5.1 textrank + Infomap + GloVe 
-df_filtered_51 = df_filtered.copy()
-df_filtered_51.dtypes
+
+#### M10 textrank + Infomap + GloVe 
+df_filtered_10 = df_filtered.copy()
+df_filtered_10.dtypes
 
 # GloVe 임베딩을 사용한 Textrank + Infomap 기반 키워드 추출 함수
 def infomap_textrank_keywords(title, abstract, top_n=5, embeddings=None):
@@ -1044,31 +1053,32 @@ def infomap_textrank_keywords(title, abstract, top_n=5, embeddings=None):
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_51['num_keywords'] = df_filtered_51['keywords'].apply(lambda x: len(x.split()))
+df_filtered_10['num_keywords'] = df_filtered_10['keywords'].apply(lambda x: len(x.split()))
 
 # Infomap과 GloVe 임베딩을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_51['extracted_keywords'] = df_filtered_51.apply(
+df_filtered_10['extracted_keywords'] = df_filtered_10.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # num_keywords 열은 필요 없으면 제거
-df_filtered_51.drop(columns=['num_keywords'], inplace=True)
+df_filtered_10.drop(columns=['num_keywords'], inplace=True)
 
 # 데이터 프레임 출력 
-print(df_filtered_51[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_10[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_51 = apply_metrics(df_filtered_51)
+df_filtered_10 = apply_metrics(df_filtered_10)
 
 # 최종 결과 출력
-df_result51 = df_filtered_51[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result10 = df_filtered_10[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 5.2 textrank + Infomap + GloVe 
-df_filtered_52 = df_filtered.copy()
-df_filtered_52.dtypes
+
+#### M11 textrank + Infomap + GloVe 
+df_filtered_11 = df_filtered.copy()
+df_filtered_11.dtypes
 
 # GloVe 임베딩을 사용한 Infomap 기반 키워드 추출 함수 정의
 def infomap_keywords_extraction_glove(title, abstract, top_n=5, beta=0.5, embeddings=None):
@@ -1140,28 +1150,29 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # DataFrame에 적용
-df_filtered_52['num_keywords'] = df_filtered_52['keywords'].apply(count_keywords)
+df_filtered_11['num_keywords'] = df_filtered_11['keywords'].apply(count_keywords)
 
 # Infomap과 GloVe 임베딩을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_52['extracted_keywords'] = df_filtered_52.apply(
+df_filtered_11['extracted_keywords'] = df_filtered_11.apply(
     lambda row: infomap_keywords_extraction_glove(row['title'], row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_52[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_11[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_52 = apply_metrics(df_filtered_52)
+df_filtered_11 = apply_metrics(df_filtered_11)
 
 # 최종 결과 출력
-df_result52 = df_filtered_52[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result11 = df_filtered_11[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 5.3 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
-df_filtered_53 = df_filtered.copy()
-df_filtered_53.dtypes
+
+#### M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
+df_filtered_12 = df_filtered.copy()
+df_filtered_12.dtypes
 
 # GloVe 임베딩을 적용한 Textrank + Infomap 기반 키워드 추출 함수
 def infomap_textrank_keywords_glove(title, abstract, top_n=5, beta=0.5, embeddings=None):
@@ -1227,7 +1238,7 @@ def get_keyword_count(keywords):
     return len(keywords.split())
 
 # GloVe 임베딩을 적용한 키워드 추출을 DataFrame에 적용
-df_filtered_53['extracted_keywords'] = df_filtered_53.apply(
+df_filtered_12['extracted_keywords'] = df_filtered_12.apply(
     lambda row: infomap_textrank_keywords_glove(
         row['title'], 
         row['abstract'], 
@@ -1239,19 +1250,20 @@ df_filtered_53['extracted_keywords'] = df_filtered_53.apply(
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_53[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_12[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_53 = apply_metrics(df_filtered_53)
+df_filtered_12 = apply_metrics(df_filtered_12)
 
 # 최종 결과 출력
-df_result53 = df_filtered_53[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result12= df_filtered_12[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 6.1 textrank + Infomap + Hierarchical
-df_filtered_61 = df_filtered.copy()
-df_filtered_61.dtypes
+
+#### M13 textrank + Infomap + 2-layer
+df_filtered_13 = df_filtered.copy()
+df_filtered_13.dtypes
 
 # 공출현 그래프 생성 함수 (단순 단어 연결로만 처리, term frequency, term position, co-occurrence 배제)
 def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5):
@@ -1302,27 +1314,28 @@ def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5):
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_61['num_keywords'] = df_filtered_61['keywords'].apply(lambda x: len(x.split()))
+df_filtered_13['num_keywords'] = df_filtered_13['keywords'].apply(lambda x: len(x.split()))
 
 # 계층적 Infomap을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_61['extracted_keywords'] = df_filtered_61.apply(
+df_filtered_13['extracted_keywords'] = df_filtered_13.apply(
     lambda row: hierarchical_infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_61[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_13[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_61 = apply_metrics(df_filtered_61)
+df_filtered_13 = apply_metrics(df_filtered_13)
 
 # 최종 결과 출력
-df_result61 = df_filtered_61[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result13 = df_filtered_13[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 6.2 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
-df_filtered_62 = df_filtered.copy()
+
+#### M14 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer
+df_filtered_14 = df_filtered.copy()
 
 # TF 계산 함수
 def calculate_tf(text):
@@ -1407,27 +1420,28 @@ def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5, beta=0.5):
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_62['num_keywords'] = df_filtered_62['keywords'].apply(lambda x: len(x.split()))
+df_filtered_14['num_keywords'] = df_filtered_14['keywords'].apply(lambda x: len(x.split()))
 
 # 계층적 Infomap을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_62['extracted_keywords'] = df_filtered_62.apply(
+df_filtered_14['extracted_keywords'] = df_filtered_14.apply(
     lambda row: hierarchical_infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_62[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_14[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_62 = apply_metrics(df_filtered_62)
+df_filtered_14 = apply_metrics(df_filtered_14)
 
 # 최종 결과 출력
-df_result62 = df_filtered_62[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result14 = df_filtered_14[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 6.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical
-df_filtered_63 = df_filtered.copy()
+
+#### M15 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer
+df_filtered_15 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
 def apply_weights(sentences):
@@ -1533,26 +1547,27 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # DataFrame에 적용하여 'num_keywords' 열 추가
-df_filtered_63['num_keywords'] = df_filtered_63['keywords'].apply(count_keywords)
+df_filtered_15['num_keywords'] = df_filtered_15['keywords'].apply(count_keywords)
 
 # 추출된 키워드를 데이터 프레임에 추가하면서 각 행의 keywords 개수를 top_n으로 지정
-df_filtered_63['extracted_keywords'] = df_filtered_63.apply(
+df_filtered_15['extracted_keywords'] = df_filtered_15.apply(
     lambda row: hierarchical_infomap_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [],
     axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_63[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_15[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_63 = apply_metrics(df_filtered_63)
+df_filtered_15 = apply_metrics(df_filtered_15)
 
 # 최종 결과 출력
-df_result63 = df_filtered_63[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result15 = df_filtered_15[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 7.1 textrank + Infomap + Hierarchical + GloVe
-df_filtered_71 = df_filtered.copy()
+
+#### M16 textrank + Infomap + Hierarchical + GloVe
+df_filtered_16 = df_filtered.copy()
 
 # 공출현 그래프 생성 함수 (GloVe 임베딩 기반 유사도 사용)
 def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5, embeddings=None):
@@ -1599,27 +1614,28 @@ def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5, embeddings=
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_71['num_keywords'] = df_filtered_71['keywords'].apply(lambda x: len(x.split()))
+df_filtered_16['num_keywords'] = df_filtered_16['keywords'].apply(lambda x: len(x.split()))
 
 # GloVe 임베딩을 사용하여 계층적 Infomap을 사용한 키워드 추출
-df_filtered_71['extracted_keywords'] = df_filtered_71.apply(
+df_filtered_16['extracted_keywords'] = df_filtered_16.apply(
     lambda row: hierarchical_infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_71[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_16[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_71 = apply_metrics(df_filtered_71)
+df_filtered_16 = apply_metrics(df_filtered_16)
 
 # 최종 결과 출력
-df_result71 = df_filtered_71[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result16 = df_filtered_16[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 7.2 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical + GloVe 
-df_filtered_72 = df_filtered.copy()
+
+#### M17 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer + GloVe 
+df_filtered_17 = df_filtered.copy()
 
 # TF 계산 함수
 def calculate_tf(text):
@@ -1705,27 +1721,28 @@ def hierarchical_infomap_textrank_keywords(title, abstract, top_n=5, beta=0.5, e
     return list(set(keywords))
 
 # DataFrame에 'keywords'의 단어 개수를 계산하여 'num_keywords' 열 추가
-df_filtered_72['num_keywords'] = df_filtered_72['keywords'].apply(lambda x: len(x.split()))
+df_filtered_17['num_keywords'] = df_filtered_17['keywords'].apply(lambda x: len(x.split()))
 
 # GloVe 임베딩을 사용하여 계층적 Infomap을 사용한 키워드 추출
-df_filtered_72['extracted_keywords'] = df_filtered_72.apply(
+df_filtered_17['extracted_keywords'] = df_filtered_17.apply(
     lambda row: hierarchical_infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_72[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_17[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_72 = apply_metrics(df_filtered_72)
+df_filtered_17 = apply_metrics(df_filtered_17)
 
 # 최종 결과 출력
-df_result72 = df_filtered_72[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result17 = df_filtered_17[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 7.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical + GloVe
-df_filtered_73 = df_filtered.copy()
+
+#### M18 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer + GloVe
+df_filtered_18 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
 def apply_weights(sentences):
@@ -1831,26 +1848,27 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # DataFrame에 적용하여 'num_keywords' 열 추가
-df_filtered_73['num_keywords'] = df_filtered_73['keywords'].apply(count_keywords)
+df_filtered_18['num_keywords'] = df_filtered_18['keywords'].apply(count_keywords)
 
 # GloVe 임베딩을 사용하여 키워드를 추출하면서 각 행의 keywords 개수를 top_n으로 지정
-df_filtered_73['extracted_keywords'] = df_filtered_73.apply(
+df_filtered_18['extracted_keywords'] = df_filtered_18.apply(
     lambda row: hierarchical_infomap_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5, embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_73[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_18[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_73 = apply_metrics(df_filtered_73)
+df_filtered_18 = apply_metrics(df_filtered_18)
 
 # 최종 결과 출력
-df_result73 = df_filtered_73[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result18 = df_filtered_18[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 8.1 textrank + Infomap + Multi Entropy
-df_filtered_81 = df_filtered.copy()
+
+#### M19 textrank + Infomap + 3-layer
+df_filtered_19 = df_filtered.copy()
 
 # 엔트로피 계산 함수
 def calculate_entropy(prob_dist):
@@ -1936,27 +1954,28 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_81['num_keywords'] = df_filtered_81['keywords'].apply(count_keywords)
+df_filtered_19['num_keywords'] = df_filtered_19['keywords'].apply(count_keywords)
 
 # 확장된 Infomap 기반 Textrank 키워드를 추가
-df_filtered_81['extracted_keywords'] = df_filtered_81.apply(
+df_filtered_19['extracted_keywords'] = df_filtered_19.apply(
     lambda row: hierarchical_infomap_textrank_keywords_multi_entropy(
         row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력
-print(df_filtered_81[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_19[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_81 = apply_metrics(df_filtered_81)
+df_filtered_19 = apply_metrics(df_filtered_19)
 
 # 최종 결과 출력
-df_result81 = df_filtered_81[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result19 = df_filtered_19[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 8.2 textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy
-df_filtered_82 = df_filtered.copy()
+
+#### M20 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer
+df_filtered_20 = df_filtered.copy()
 
 # 공출현 계산 함수
 def calculate_co_occurrence(sentences, window_size=2):
@@ -2054,27 +2073,28 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_82['num_keywords'] = df_filtered_82['keywords'].apply(count_keywords)
+df_filtered_20['num_keywords'] = df_filtered_20['keywords'].apply(count_keywords)
 
 # DataFrame에 확장된 Infomap 기반 Textrank 키워드를 추가
-df_filtered_82['extracted_keywords'] = df_filtered_82.apply(
+df_filtered_20['extracted_keywords'] = df_filtered_20.apply(
     lambda row: infomap_textrank_keywords_extended(
         row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_82[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_20[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_82 = apply_metrics(df_filtered_82)
+df_filtered_20 = apply_metrics(df_filtered_20)
 
 # 최종 결과 출력
-df_result82 = df_filtered_82[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result20 = df_filtered_20[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 8.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Multi Entropy
-df_filtered_83 = df_filtered.copy()
+
+#### M21 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer
+df_filtered_21 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
 def apply_weights(sentences):
@@ -2205,27 +2225,28 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_83['num_keywords'] = df_filtered_83['keywords'].apply(count_keywords)
+df_filtered_21['num_keywords'] = df_filtered_21['keywords'].apply(count_keywords)
 
 # DataFrame에 확장된 Infomap 기반 Textrank 키워드를 추가 (Double Negation, Mitigation, and Hedges Weighting 포함)
-df_filtered_83['extracted_keywords'] = df_filtered_83.apply(
+df_filtered_21['extracted_keywords'] = df_filtered_21.apply(
     lambda row: infomap_textrank_keywords_extended(
         row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_83[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_21[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_83 = apply_metrics(df_filtered_83)
+df_filtered_21 = apply_metrics(df_filtered_21)
 
 # 최종 결과 출력
-df_result83 = df_filtered_83[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result21 = df_filtered_21[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 9.1 textrank + Infomap + Multi Entropy + GloVe 
-df_filtered_91 = df_filtered.copy()
+
+#### M22 textrank + Infomap + Multi Entropy + GloVe 
+df_filtered_22 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
 def sentence_embedding(sentence, embeddings, dim=100):
@@ -2316,27 +2337,28 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_91['num_keywords'] = df_filtered_91['keywords'].apply(count_keywords)
+df_filtered_22['num_keywords'] = df_filtered_22['keywords'].apply(count_keywords)
 
 # 확장된 Infomap 기반 Textrank 키워드를 추가 (GloVe 임베딩 적용)
-df_filtered_91['extracted_keywords'] = df_filtered_91.apply(
+df_filtered_22['extracted_keywords'] = df_filtered_22.apply(
     lambda row: hierarchical_infomap_textrank_keywords_multi_entropy_glove(
         row['title'], row['abstract'], glove_embeddings, top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력
-print(df_filtered_91[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_22[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_91 = apply_metrics(df_filtered_91)
+df_filtered_22 = apply_metrics(df_filtered_22)
 
 # 최종 결과 출력
-df_result91 = df_filtered_91[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result22 = df_filtered_22[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 9.2 textrank + term frequency, term postion, word co-occurence + Infomap + Multi level Entropy + GloVe 
-df_filtered_92 = df_filtered.copy()
+
+#### M23 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer + GloVe 
+df_filtered_23 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
 def sentence_embedding(sentence, embeddings, dim=100):
@@ -2427,27 +2449,28 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_92['num_keywords'] = df_filtered_92['keywords'].apply(count_keywords)
+df_filtered_23['num_keywords'] = df_filtered_23['keywords'].apply(count_keywords)
 
 # 확장된 Infomap 기반 Textrank 키워드를 추가 (GloVe 임베딩 적용)
-df_filtered_92['extracted_keywords'] = df_filtered_92.apply(
+df_filtered_23['extracted_keywords'] = df_filtered_23.apply(
     lambda row: infomap_textrank_keywords_extended_glove(
         row['title'], row['abstract'], glove_embeddings, top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력
-print(df_filtered_92[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_23[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_92 = apply_metrics(df_filtered_92)
+df_filtered_23 = apply_metrics(df_filtered_23)
 
 # 최종 결과 출력
-df_result92 = df_filtered_92[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result23 = df_filtered_23[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 9.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Multi Entropy + GloVe 
-df_filtered_93 = df_filtered.copy()
+
+#### M24 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer + GloVe 
+df_filtered_24 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
 def sentence_embedding(sentence, embeddings, dim=100):
@@ -2571,32 +2594,33 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # 각 행의 keywords 개수로 top_n 설정
-df_filtered_93['num_keywords'] = df_filtered_93['keywords'].apply(count_keywords)
+df_filtered_24['num_keywords'] = df_filtered_24['keywords'].apply(count_keywords)
 
 # DataFrame에 확장된 Infomap 기반 Textrank 키워드를 추가 (Double Negation, Mitigation, Hedges Weighting 및 GloVe 임베딩 포함)
-df_filtered_93['extracted_keywords'] = df_filtered_93.apply(
+df_filtered_24['extracted_keywords'] = df_filtered_24.apply(
     lambda row: infomap_textrank_keywords_extended_glove(
         row['title'], row['abstract'], glove_embeddings, top_n=row['num_keywords'], beta=0.5
     ), axis=1)
 
 # 데이터 프레임 출력 
-print(df_filtered_93[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_24[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_93 = apply_metrics(df_filtered_93)
+df_filtered_24 = apply_metrics(df_filtered_24)
 
 # 최종 결과 출력
-df_result93 = df_filtered_93[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result24 = df_filtered_24[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 10.1 textrank + Infomap + jaccard
+
+#### M25 textrank + Infomap + jaccard
 ##  Jaccard 유사도는 단어의 빈도와 위치를 반영하지 않음
 # Jaccard 유사도는 단순히 두 집합에서 단어의 존재 여부만을 고려하여 교집합과 합집합을 계산합니다.
 # 이 때문에, 단어가 텍스트에 몇 번 등장했는지 또는 단어가 문장의 어느 위치에 있는지는 Jaccard 유사도에 반영되지 않습니다.
 # Glove 임베딩, 단어 빈도 (TF), 단어 위치 (Position), 공출현(Word Co-occurrence) 등과는 달리, Jaccard 유사도는 단어 간의 의미적 유사성이나 중요도를 고려하지 않기 때문에 결과에 큰 차이를 만들지 못합니다.
-df_filtered_101 = df_filtered.copy()
-df_filtered_101 .dtypes
+df_filtered_25 = df_filtered.copy()
+df_filtered_25 .dtypes
 
 # Preprocess the abstract (remove stopwords and tokenize)
 def preprocess_text(text):
@@ -2665,32 +2689,33 @@ def infomap_textrank_keywords(title, abstract, top_n=5):
 
 
 # Add 'num_keywords' for setting top_n dynamically
-df_filtered_101['num_keywords'] = df_filtered_101['keywords'].apply(lambda x: len(x.split()))
+df_filtered_25['num_keywords'] = df_filtered_25['keywords'].apply(lambda x: len(x.split()))
 
 # Extract keywords using Infomap and Jaccard similarity
-df_filtered_101['extracted_keywords'] = df_filtered_101.apply(
+df_filtered_25['extracted_keywords'] = df_filtered_25.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_101[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_25[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_101 = apply_metrics(df_filtered_101)
+df_filtered_25 = apply_metrics(df_filtered_25)
 
 # 최종 결과 출력
-df_result101 = df_filtered_101[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result25 = df_filtered_25[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 10.2 textrank + term frequency, term postion, word co-occurence + Infomap + jcd
+
+#### M26 textrank + term frequency, term postion, word co-occurence + Infomap + jcd
 ##  Jaccard 유사도는 단어의 빈도와 위치를 반영하지 않음
 # Jaccard 유사도는 단순히 두 집합에서 단어의 존재 여부만을 고려하여 교집합과 합집합을 계산합니다.
 # 이 때문에, 단어가 텍스트에 몇 번 등장했는지 또는 단어가 문장의 어느 위치에 있는지는 Jaccard 유사도에 반영되지 않습니다.
 # Glove 임베딩, 단어 빈도 (TF), 단어 위치 (Position), 공출현(Word Co-occurrence) 등과는 달리, Jaccard 유사도는 단어 간의 의미적 유사성이나 중요도를 고려하지 않기 때문에 결과에 큰 차이를 만들지 못합니다.
-df_filtered_102 = df_filtered.copy()
-df_filtered_102.dtypes
+df_filtered_26 = df_filtered.copy()
+df_filtered_26.dtypes
 
 # Preprocess the abstract (remove stopwords and tokenize)
 def preprocess_text(text):
@@ -2786,37 +2811,38 @@ def infomap_textrank_keywords(title, abstract, top_n=5, beta=0.5):
     return list(set(keywords))
 
 # Add 'num_keywords' for setting top_n dynamically
-df_filtered_102['num_keywords'] = df_filtered_102['keywords'].apply(lambda x: len(x.split()))
+df_filtered_26['num_keywords'] = df_filtered_26['keywords'].apply(lambda x: len(x.split()))
 
 # Extract keywords using Infomap and term frequency, term position, and word co-occurrence
-df_filtered_102['extracted_keywords'] = df_filtered_102.apply(
+df_filtered_26['extracted_keywords'] = df_filtered_26.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_102[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_26[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_102 = apply_metrics(df_filtered_102)
+df_filtered_26 = apply_metrics(df_filtered_26)
 
 # 최종 결과 출력
-df_result102 = df_filtered_102[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result26 = df_filtered_26[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 # 데이터 프레임 출력 
-print(df_filtered_102[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_26[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_102 = apply_metrics(df_filtered_102)
+df_filtered_26 = apply_metrics(df_filtered_26)
 
 # 최종 결과 출력
-df_result102 = df_filtered_102[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result26 = df_filtered_26[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 10.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jcd
-df_filtered_103 = df_filtered.copy()
+
+#### M27 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jcd
+df_filtered_27 = df_filtered.copy()
 
 # Preprocess the abstract (remove stopwords and tokenize)
 def preprocess_text(text):
@@ -2944,28 +2970,29 @@ def infomap_textrank_keywords(title, abstract, top_n=5, beta=0.5):
     return list(set(keywords))
 
 # Add 'num_keywords' for setting top_n dynamically
-df_filtered_103['num_keywords'] = df_filtered_103['keywords'].apply(lambda x: len(x.split()))
+df_filtered_27['num_keywords'] = df_filtered_27['keywords'].apply(lambda x: len(x.split()))
 
 # Extract keywords using Infomap and term frequency, term position, word co-occurrence, and Double Negation, Mitigation, and Hedges Weighting
-df_filtered_103['extracted_keywords'] = df_filtered_103.apply(
+df_filtered_27['extracted_keywords'] = df_filtered_27.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_103[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_27[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_103 = apply_metrics(df_filtered_103)
+df_filtered_27 = apply_metrics(df_filtered_27)
 
 # 최종 결과 출력
-df_result103 = df_filtered_103[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result27 = df_filtered_27[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 11.1 textrank + Infomap + NetMRF
-df_filtered_111 = df_filtered.copy()
-df_filtered_111.dtypes
+
+#### M28 textrank + Infomap + NetMRF
+df_filtered_28 = df_filtered.copy()
+df_filtered_28.dtypes
 
 # MRF 초기화 및 최적화 함수 (NetMRF 적용)
 def initialize_mrf(similarity_matrix):
@@ -3038,27 +3065,28 @@ def infomap_netmrf_keywords_extraction(text, top_n=5, num_iterations=1000, thres
     return extracted_keywords
 
 # DataFrame에 적용 (NetMRF를 사용하여 키워드 추출)
-df_filtered_111['num_keywords'] = df_filtered_111['keywords'].apply(count_keywords)
+df_filtered_28['num_keywords'] = df_filtered_28['keywords'].apply(count_keywords)
 
-df_filtered_111['extracted_keywords'] = df_filtered_111.apply(
+df_filtered_28['extracted_keywords'] = df_filtered_28.apply(
     lambda row: infomap_netmrf_keywords_extraction(row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_111[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_28[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_111 = apply_metrics(df_filtered_111)
+df_filtered_28 = apply_metrics(df_filtered_28)
 
 # 최종 결과 출력
-df_result111 = df_filtered_111[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result28 = df_filtered_28[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 11.2 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF
-df_filtered_112 = df_filtered.copy()
-df_filtered_112.dtypes
+
+#### M29 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF
+df_filtered_29 = df_filtered.copy()
+df_filtered_29.dtypes
 
 # TF 계산 함수 (abstract에서의 term frequency 계산)
 def calculate_tf(text):
@@ -3160,27 +3188,28 @@ def infomap_netmrf_keywords_extraction(title, abstract, top_n=5, num_iterations=
     return extracted_keywords
 
 # DataFrame에 적용 (NetMRF를 사용하여 키워드 추출)
-df_filtered_112['num_keywords'] = df_filtered_112['keywords'].apply(count_keywords)
+df_filtered_29['num_keywords'] = df_filtered_29['keywords'].apply(count_keywords)
 
-df_filtered_112['extracted_keywords'] = df_filtered_112.apply(
+df_filtered_29['extracted_keywords'] = df_filtered_29.apply(
     lambda row: infomap_netmrf_keywords_extraction(row['title'], row['abstract'], top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_112[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_29[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_112 = apply_metrics(df_filtered_112)
+df_filtered_29 = apply_metrics(df_filtered_29)
 
 # 최종 결과 출력
-df_result112 = df_filtered_112[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result29 = df_filtered_29[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 11.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF
-df_filtered_113 = df_filtered.copy()
-df_filtered_113.dtypes
+
+#### M30 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF
+df_filtered_30 = df_filtered.copy()
+df_filtered_30.dtypes
 
 # Preprocess the abstract (remove stopwords and tokenize)
 def preprocess_text(text):
@@ -3308,27 +3337,28 @@ def infomap_textrank_keywords(title, abstract, top_n=5, beta=0.5):
     return list(set(keywords))
 
 # Add 'num_keywords' for setting top_n dynamically
-df_filtered_113['num_keywords'] = df_filtered_113['keywords'].apply(lambda x: len(x.split()))
+df_filtered_30['num_keywords'] = df_filtered_30['keywords'].apply(lambda x: len(x.split()))
 
 # Extract keywords using Infomap and term frequency, term position, word co-occurrence, and Double Negation, Mitigation, and Hedges Weighting
-df_filtered_113['extracted_keywords'] = df_filtered_113.apply(
+df_filtered_30['extracted_keywords'] = df_filtered_30.apply(
     lambda row: infomap_textrank_keywords(row['title'], row['abstract'], top_n=row['num_keywords'], beta=0.5) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_113[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_30[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_113 = apply_metrics(df_filtered_113)
+df_filtered_30 = apply_metrics(df_filtered_30)
 
 # 최종 결과 출력
-df_result113 = df_filtered_113[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result30 = df_filtered_30[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 12.1 textrank + Infomap + NetMRF + GloVe 
-df_filtered_121 = df_filtered.copy()
+
+#### M31 textrank + Infomap + NetMRF + GloVe 
+df_filtered_31 = df_filtered.copy()
 
 # GloVe 임베딩을 사용한 유사도 계산 함수
 def glove_similarity(word1, word2, embeddings):
@@ -3413,9 +3443,9 @@ def infomap_netmrf_keywords_extraction(text, top_n=5, glove_embeddings=None, num
     return extracted_keywords
 
 # DataFrame에 적용 (NetMRF를 사용하여 GloVe 임베딩으로 키워드 추출)
-df_filtered_121['num_keywords'] = df_filtered_121['keywords'].apply(count_keywords)
+df_filtered_31['num_keywords'] = df_filtered_31['keywords'].apply(count_keywords)
 
-df_filtered_121['extracted_keywords'] = df_filtered_121.apply(
+df_filtered_31['extracted_keywords'] = df_filtered_31.apply(
     lambda row: infomap_netmrf_keywords_extraction(
         row['abstract'], top_n=row['num_keywords'], glove_embeddings=glove_embeddings
     ) if pd.notnull(row['abstract']) else [],
@@ -3423,19 +3453,20 @@ df_filtered_121['extracted_keywords'] = df_filtered_121.apply(
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_121[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_31[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_121 = apply_metrics(df_filtered_121)
+df_filtered_31 = apply_metrics(df_filtered_31)
 
 # 최종 결과 출력
-df_result121 = df_filtered_121[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result31 = df_filtered_31[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 12.2 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe 
-df_filtered_122 = df_filtered.copy()
-df_filtered_122.dtypes
+
+#### M32 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe 
+df_filtered_32 = df_filtered.copy()
+df_filtered_32.dtypes
 
 # GloVe 임베딩을 사용한 유사도 계산 함수
 def glove_similarity(word1, word2, embeddings):
@@ -3549,9 +3580,9 @@ def infomap_netmrf_keywords_extraction(title, abstract, top_n=5, num_iterations=
     return extracted_keywords
 
 # DataFrame에 적용 (NetMRF와 GloVe 임베딩을 사용하여 키워드 추출)
-df_filtered_122['num_keywords'] = df_filtered_122['keywords'].apply(count_keywords)
+df_filtered_32['num_keywords'] = df_filtered_32['keywords'].apply(count_keywords)
 
-df_filtered_122['extracted_keywords'] = df_filtered_122.apply(
+df_filtered_32['extracted_keywords'] = df_filtered_32.apply(
     lambda row: infomap_netmrf_keywords_extraction(
         row['title'], row['abstract'], top_n=row['num_keywords'], glove_embeddings=glove_embeddings
     ) if pd.notnull(row['abstract']) else [],
@@ -3559,19 +3590,20 @@ df_filtered_122['extracted_keywords'] = df_filtered_122.apply(
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_122[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_32[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_122 = apply_metrics(df_filtered_122)
+df_filtered_32 = apply_metrics(df_filtered_32)
 
 # 최종 결과 출력
-df_result122 = df_filtered_122[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result32 = df_filtered_32[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-#### 12.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe 
-df_filtered_123 = df_filtered.copy()
-df_filtered_123.dtypes
+
+#### M33 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe 
+df_filtered_33 = df_filtered.copy()
+df_filtered_33.dtypes
 
 # GloVe 임베딩을 사용한 유사도 계산 함수
 def glove_similarity(word1, word2, embeddings):
@@ -3681,10 +3713,10 @@ def infomap_textrank_keywords(title, abstract, top_n=5, glove_embeddings=None, b
     return list(set(keywords))
 
 # Add 'num_keywords' for setting top_n dynamically
-df_filtered_123['num_keywords'] = df_filtered_123['keywords'].apply(lambda x: len(x.split()))
+df_filtered_33['num_keywords'] = df_filtered_33['keywords'].apply(lambda x: len(x.split()))
 
 # Extract keywords using Infomap and GloVe embeddings with Double Negation, Mitigation, and Hedges Weighting
-df_filtered_123['extracted_keywords'] = df_filtered_123.apply(
+df_filtered_33['extracted_keywords'] = df_filtered_33.apply(
     lambda row: infomap_textrank_keywords(
         row['title'], row['abstract'], top_n=row['num_keywords'], glove_embeddings=glove_embeddings, beta=0.5
     ) if pd.notnull(row['abstract']) else [],
@@ -3692,48 +3724,51 @@ df_filtered_123['extracted_keywords'] = df_filtered_123.apply(
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_123[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_33[['abstract', 'keywords', 'extracted_keywords']])
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
-df_filtered_123 = apply_metrics(df_filtered_123)
+df_filtered_33 = apply_metrics(df_filtered_33)
 
 # 최종 결과 출력
-df_result123 = df_filtered_123[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result33 = df_filtered_33[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
 
 
-print(df_result11) #### 1.1 textrank
-print(df_result12) #### 1.2 textrank + term frequency, term postion, word co-occurence
-print(df_result13) #### 1.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting
-print(df_result14) #### 1.4 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
-print(df_result2) #### 2. textrank + TP-CoGlo-TextRank(GLove)
-print(df_result3) #### 3. textrank + Watts-Strogatz model
-print(df_result41) #### 4.1 textrank + Infomap
-print(df_result42) #### 4.2 textrank + term frequency, term postion, word co-occurence + Infomap
-print(df_result43) #### 4.3 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges
-print(df_result51) #### 5.1 textrank + Infomap + GloVe 
-print(df_result52) #### 5.2 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
-print(df_result53) #### 5.3 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
-print(df_result61) #### 6.1 textrank + Infomap + Hierarchical
-print(df_result62) #### 6.2 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
-print(df_result63) #### 6.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical
-print(df_result71) #### 7.1 textrank + Infomap + Hierarchical + GloVe 
-print(df_result72) #### 7.2 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical + GloVe 
-print(df_result73) #### 7.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical + GloVe 
-print(df_result81) #### 8.1 textrank + Infomap + Multi Entropy
-print(df_result82) #### 8.2 textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy
-print(df_result83) #### 8.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Multi Entropy
-print(df_result91) #### 9.1 textrank + Infomap + Multi Entropy + GloVe
-print(df_result92) #### 9.2 textrank + term frequency, term postion, word co-occurence + Infomap + Multi level Entropy + GloVe 
-print(df_result101) #### 10.1 textrank + Infomap + jaccard
-print(df_result102) #### 10.2 textrank + term frequency, term postion, word co-occurence + Infomap + jcd
-print(df_result103) #### 10.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jcd
-print(df_result111) #### 11.1 textrank + Infomap + NetMRF
-print(df_result112) #### 11.2 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF
-print(df_result113) #### 11.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF
-print(df_result121) #### 12.1 textrank + Infomap + NetMRF + GloVe 
-print(df_result122) #### 12.2 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe
-print(df_result123) #### 12.3 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe 
+
+print(df_result01) #### M01 textrank
+print(df_result02) #### M02 textrank + term frequency, term postion, word co-occurence
+print(df_result03) #### M03 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting
+print(df_result04) #### M04 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
+print(df_result05) #### M05 textrank + TP-CoGlo-TextRank(GLove)
+print(df_result06) #### M06 textrank + Watts-Strogatz model
+print(df_result07) #### M07 textrank + Infomap
+print(df_result08) #### M08 textrank + term frequency, term postion, word co-occurence + Infomap
+print(df_result09) #### M09 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges
+print(df_result10) #### M10 textrank + Infomap + GloVe 
+print(df_result11) #### M11 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
+print(df_result12) #### M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
+print(df_result13) #### M13 textrank + Infomap + 2-layer
+print(df_result14) #### M14 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer
+print(df_result15) #### M15 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer
+print(df_result16) #### M16 textrank + Infomap + 2-layer + GloVe 
+print(df_result17) #### M17 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer + GloVe .
+print(df_result18) #### M18 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer + GloVe 
+print(df_result19) #### M19 textrank + Infomap + 3-layer
+print(df_result20) #### M20 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer
+print(df_result21) #### M21 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer
+print(df_result22) #### M22 textrank + Infomap + 3-layer + GloVe
+print(df_result23) #### M23 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer + GloVe 
+print(df_result24) #### M24 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer + GloVe 
+print(df_result25) #### M25 textrank + Infomap + jaccard
+print(df_result26) #### M26 textrank + term frequency, term postion, word co-occurence + Infomap + jaccard
+print(df_result27) #### M27 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jaccard
+print(df_result28) #### M28 textrank + Infomap + NetMRF
+print(df_result29) #### M29 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF
+print(df_result30) #### M30 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF
+print(df_result31) #### M31 textrank + Infomap + NetMRF + GloVe 
+print(df_result32) #### M32 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe
+print(df_result33) #### M33 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe 
+
 
 
 # 각 DataFrame의 평균 계산 함수
@@ -3742,75 +3777,79 @@ def calculate_means(df):
     return means
 
 # 각 DataFrame의 평균 계산
+means_result01 = calculate_means(df_result01)
+means_result02 = calculate_means(df_result02)
+means_result03 = calculate_means(df_result03)
+means_result04 = calculate_means(df_result04)
+means_result05 = calculate_means(df_result05)
+means_result06 = calculate_means(df_result06)
+means_result07 = calculate_means(df_result07)
+means_result08 = calculate_means(df_result08)
+means_result09 = calculate_means(df_result09)
+means_result10 = calculate_means(df_result10)
 means_result11 = calculate_means(df_result11)
 means_result12 = calculate_means(df_result12)
 means_result13 = calculate_means(df_result13)
 means_result14 = calculate_means(df_result14)
-means_result2 = calculate_means(df_result2)
-means_result3 = calculate_means(df_result3)
-means_result41 = calculate_means(df_result41)
-means_result42 = calculate_means(df_result42)
-means_result43 = calculate_means(df_result43)
-means_result51 = calculate_means(df_result51)
-means_result52 = calculate_means(df_result52)
-means_result53 = calculate_means(df_result53)
-means_result61 = calculate_means(df_result61)
-means_result62 = calculate_means(df_result62)
-means_result63 = calculate_means(df_result63)
-means_result71 = calculate_means(df_result71)
-means_result72 = calculate_means(df_result72)
-means_result73 = calculate_means(df_result73)
-means_result81 = calculate_means(df_result81)
-means_result82 = calculate_means(df_result82)
-means_result83 = calculate_means(df_result83)
-means_result91 = calculate_means(df_result91)
-means_result92 = calculate_means(df_result92)
-means_result101 = calculate_means(df_result101)
-means_result102 = calculate_means(df_result102)
-means_result103 = calculate_means(df_result103)
-means_result111 = calculate_means(df_result111)
-means_result112 = calculate_means(df_result112)
-means_result113 = calculate_means(df_result113)
-means_result121 = calculate_means(df_result121)
-means_result122 = calculate_means(df_result122)
-means_result123 = calculate_means(df_result123)
+means_result15 = calculate_means(df_result15)
+means_result16 = calculate_means(df_result16)
+means_result17 = calculate_means(df_result17)
+means_result18 = calculate_means(df_result18)
+means_result19 = calculate_means(df_result19)
+means_result20 = calculate_means(df_result20)
+means_result21 = calculate_means(df_result21)
+means_result22 = calculate_means(df_result22)
+means_result23 = calculate_means(df_result23)
+means_result24 = calculate_means(df_result24)
+means_result25 = calculate_means(df_result25)
+means_result26 = calculate_means(df_result26)
+means_result27 = calculate_means(df_result27)
+means_result28 = calculate_means(df_result28)
+means_result29 = calculate_means(df_result29)
+means_result30 = calculate_means(df_result30)
+means_result31 = calculate_means(df_result31)
+means_result32 = calculate_means(df_result32)
+means_result33 = calculate_means(df_result33)
+
+
 
 # 평균 결과를 사전으로 변환
 means_dict = {
-    "M01 textrank"  : means_result11,
-"M02 textrank + term frequency, term postion, word co-occurence"  : means_result12,
-"M03 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting "  : means_result13,
-"M04 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove"  : means_result14,
-"M05 textrank + TP-CoGlo-TextRank(GLove)"  : means_result2,
-"M06 textrank + Watts-Strogatz model"  : means_result3,
-"M07 textrank + Infomap"  : means_result41,
-"M08 textrank + term frequency, term postion, word co-occurence + Infomap"  : means_result42,
-"M09 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges"  : means_result43,
-"M10 textrank + Infomap + GloVe "  : means_result51,
-"M11 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe"  : means_result52,
-"M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe"  : means_result53,
-"M13 textrank + Infomap + Hierarchical"  : means_result61,
-"M14 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical"  : means_result62,
-"M15 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical"  : means_result63,
-"M16 textrank + Infomap + Hierarchical + GloVe "  : means_result71,
-"M17 textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical + GloVe "  : means_result72,
-"M18 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Hierarchical + GloVe "  : means_result73,
-"M19 textrank + Infomap + Multi Entropy"  : means_result81,
-"M20 textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy"  : means_result82,
-"M21 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Multi Entropy"  : means_result83,
-"M22 textrank + Infomap + Multi Entropy + GloVe "  : means_result91,
-"M23 textrank + term frequency, term postion, word co-occurence + Infomap + Multi level Entropy + GloVe "  : means_result92,
-"M24 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + Multi Entropy + GloVe "  : means_result101,
-"M25 textrank + Infomap + jcd"  : means_result102,
-"M26 textrank + term frequency, term postion, word co-occurence + Infomap + jcd"  : means_result103,
-"M27 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jcd"  : means_result111,
-"M28 textrank + Infomap + NetMRF"  : means_result112,
-"M29 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF"  : means_result113,
-"M30 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF"  : means_result121,
-"M31 textrank + Infomap + NetMRF + GloVe "  : means_result122,
-"M32 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe "  : means_result123,
-"M33 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe "  : means_result123
+"M01 textrank"  : means_result01,
+"M02 textrank + term frequency, term postion, word co-occurence"  : means_result02,
+"M03 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting "  : means_result03,
+"M04 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove"  : means_result04,
+"M05 textrank + TP-CoGlo-TextRank(GLove)"  : means_result05,
+"M06 textrank + Watts-Strogatz model"  : means_result06,
+"M07 textrank + Infomap"  : means_result07,
+"M08 textrank + term frequency, term postion, word co-occurence + Infomap"  : means_result08,
+"M09 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges"  : means_result09,
+"M10 textrank + Infomap + GloVe "  : means_result10,
+"M11 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe"  : means_result11,
+"M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe"  : means_result12,
+"M13 textrank + Infomap + 2-layer"  : means_result13,
+"M14 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer"  : means_result14,
+"M15 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer"  : means_result15,
+"M16 textrank + Infomap + 2-layer + GloVe "  : means_result16,
+"M17 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer + GloVe "  : means_result17,
+"M18 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer + GloVe "  : means_result18,
+"M19 textrank + Infomap + 3-layer"  : means_result19,
+"M20 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer"  : means_result20,
+"M21 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer"  : means_result21,
+"M22 textrank + Infomap + 3-layer + GloVe "  : means_result22,
+"M23 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer + GloVe "  : means_result23,
+"M24 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer + GloVe "  : means_result24,
+"M25 textrank + Infomap + jaccard"  : means_result25,
+"M26 textrank + term frequency, term postion, word co-occurence + Infomap + jaccard"  : means_result26,
+"M27 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jaccard"  : means_result27,
+"M28 textrank + Infomap + NetMRF"  : means_result28,
+"M29 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF"  : means_result29,
+"M30 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF"  : means_result30,
+"M31 textrank + Infomap + NetMRF + GloVe "  : means_result31,
+"M32 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe "  : means_result32,
+"M33 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe "  : means_result33
 }
+
 
 # 사전을 DataFrame으로 변환
 summary_df = pd.DataFrame(means_dict)
@@ -3838,5 +3877,3 @@ summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summa
 # 7. MCC (Matthews Correlation Coefficient) 용도: 정확도, 정밀도, 재현율을 모두 고려하여 예측의 전체적인 성능을 평가합니다. 특히, 데이터가 불균형한 경우에도 신뢰성 있게 성능을 평가할 수 있는 지표입니다.
 
 # 8. Bray-Curtis Dissimilarity (브레이-커티스 비유사도) 용도: 생태학이나 데이터 마이닝에서 두 분포의 차이를 측정하는 데 사용됩니다. 샘플 간의 비유사도를 측정하는 데 유용합니다.
-
-

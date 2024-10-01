@@ -14,13 +14,22 @@ import re
 from random import randint, random
 import math
 from sklearn.metrics import precision_score, recall_score, f1_score
+from scipy.stats import norm
+from scipy.stats import dirichlet
+from scipy.stats import pareto
+from scipy.stats import beta
+from scipy.stats import expon
+from scipy.stats import entropy
+from sklearn.metrics.pairwise import cosine_similarity
+import random
+from transformers import BertTokenizer, BertModel
+import torch
 
 
 
 # 파일 경로 설정
-# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_sample_processed.csv'
 file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv' # 수정
-# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
+#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
@@ -1640,6 +1649,840 @@ df_result_infomap_m = df_filtered_infomap_m[['precision', 'recall', 'f1', 'rouge
 print(df_result_infomap_m)
 
 
+#### 9. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(gaussian)
+df_filtered_infomap_b_g = df_filtered.copy()
+
+# Gaussian Prior 적용 함수
+def apply_gaussian_prior(word, mu=0.0, sigma=1.0):
+    """
+    Gaussian 분포의 확률 밀도 함수 (pdf)를 사용하여 단어의 사전확률을 계산.
+    mu는 Gaussian 분포의 평균, sigma는 표준 편차.
+    """
+    word_id = (hash(word) % 1000) / 1000  # 단어의 고유 ID를 0~1 사이의 값으로 정규화
+    prior = norm.pdf(word_id, loc=mu, scale=sigma)
+    
+    return prior
+
+# Term Frequency 계산 함수
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 빈도 계산 함수
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+            
+    return co_occurrence
+
+# 확장된 Infomap 기반 키워드 추출 함수 (Gaussian Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_gaussian_prior(text, title, top_n=5, mu=0.0, sigma=1.0):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Gaussian Prior를 사용하여 각 단어의 사전확률을 계산
+        prior_word1 = apply_gaussian_prior(word_to_id[word1], mu=mu, sigma=sigma)
+        prior_word2 = apply_gaussian_prior(word_to_id[word2], mu=mu, sigma=sigma)
+        
+        # Term Frequency를 가중치에 반영
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = weight * prior_word1 * prior_word2 * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용
+df_filtered_infomap_b_g['num_keywords'] = df_filtered_infomap_b_g['keywords'].apply(count_keywords)
+
+# Gaussian Prior를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_g['extracted_keywords'] = df_filtered_infomap_b_g.apply(
+    lambda row: infomap_keywords_extraction_with_gaussian_prior(
+        row['abstract'], row['title'], top_n=row['num_keywords'], mu=0.0, sigma=1.0) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_g.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_g[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_g['metrics'] = df_filtered_infomap_b_g.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_g[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_g['metrics'].tolist(), index=df_filtered_infomap_b_g.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_g['rouge'] = df_filtered_infomap_b_g.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_g['rouge1'] = df_filtered_infomap_b_g['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_g['rougeL'] = df_filtered_infomap_b_g['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_g = df_filtered_infomap_b_g[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_g)
+
+
+#### 10. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(dirichlet)
+df_filtered_infomap_b_d = df_filtered.copy()
+df_filtered_infomap_b_d.dtypes
+
+from scipy.stats import dirichlet
+import numpy as np
+
+# Dirichlet Prior 적용 함수
+def apply_dirichlet_prior(words, alpha=None):
+    """
+    Dirichlet 분포의 확률 밀도 함수 (pdf)를 사용하여 단어 분포에 대한 사전확률을 계산.
+    alpha는 Dirichlet 분포의 매개변수로, 각 단어에 대한 확률 매개변수를 설정.
+    """
+    # 단어 빈도 계산
+    word_counts = Counter(words)
+    total_words = sum(word_counts.values())
+    
+    # 각 단어의 비율을 계산
+    word_frequencies = np.array([word_counts[word] / total_words for word in words])
+    
+    # 비율의 합이 1이 되도록 정규화
+    word_frequencies /= word_frequencies.sum()
+    
+    # alpha 값이 없으면 빈도 기반으로 alpha 값을 설정
+    if alpha is None:
+        alpha = word_frequencies
+    
+    # Dirichlet 분포의 확률 밀도 함수 적용
+    prior = dirichlet.pdf(word_frequencies, alpha + 1e-10)  # 안정성을 위해 작은 값을 더함
+    
+    return prior
+
+# Term Frequency 계산 함수
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 빈도 계산 함수
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+    return co_occurrence
+
+# 확장된 Infomap 기반 키워드 추출 함수 (Dirichlet Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_dirichlet_prior(text, title, top_n=5, alpha=None):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Dirichlet Prior 적용
+    dirichlet_prior = apply_dirichlet_prior(words, alpha=alpha)
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Dirichlet Prior와 TF를 반영하여 가중치 계산
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = weight * dirichlet_prior * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# DataFrame에 적용
+df_filtered_infomap_b_d['num_keywords'] = df_filtered_infomap_b_d['keywords'].apply(count_keywords)
+
+# Dirichlet Prior를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_d['extracted_keywords'] = df_filtered_infomap_b_d.apply(
+    lambda row: infomap_keywords_extraction_with_dirichlet_prior(
+        row['abstract'], row['title'], top_n=row['num_keywords'], alpha=None) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_d.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_d[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_d['metrics'] = df_filtered_infomap_b_d.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_d[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_d['metrics'].tolist(), index=df_filtered_infomap_b_d.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_d['rouge'] = df_filtered_infomap_b_d.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_d['rouge1'] = df_filtered_infomap_b_d['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_d['rougeL'] = df_filtered_infomap_b_d['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_d = df_filtered_infomap_b_d[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_d)
+
+
+#### 11. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(pareto)
+df_filtered_infomap_b_p = df_filtered.copy()
+
+# Pareto Prior 적용 함수
+def apply_pareto_prior(word, b=1.5, scale=1.0):
+    """
+    Pareto 분포의 확률 밀도 함수 (pdf)를 사용하여 단어의 사전확률을 계산.
+    b는 Pareto 분포의 shape 매개변수, scale은 scale 매개변수.
+    """
+    word_id = (hash(word) % 1000) / 1000  # 단어의 고유 ID를 0~1 사이의 값으로 정규화
+    prior = pareto.pdf(word_id, b=b, scale=scale)
+    
+    return prior
+
+# Term Frequency 계산 함수는 그대로 사용
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 빈도 계산 함수도 그대로 사용
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+            
+    return co_occurrence
+
+# 확장된 Infomap 기반 키워드 추출 함수 (Pareto Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_pareto_prior(text, title, top_n=5, b=1.5, scale=1.0):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Pareto Prior를 사용하여 각 단어의 사전확률을 계산
+        prior_word1 = apply_pareto_prior(word_to_id[word1], b=b, scale=scale)
+        prior_word2 = apply_pareto_prior(word_to_id[word2], b=b, scale=scale)
+        
+        # Term Frequency를 가중치에 반영
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = weight * prior_word1 * prior_word2 * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용
+df_filtered_infomap_b_p['num_keywords'] = df_filtered_infomap_b_p['keywords'].apply(count_keywords)
+
+# Pareto Prior를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_p['extracted_keywords'] = df_filtered_infomap_b_p.apply(
+    lambda row: infomap_keywords_extraction_with_pareto_prior(
+        row['abstract'], row['title'], top_n=row['num_keywords'], b=1.5, scale=1.0) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_p.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_p[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_p['metrics'] = df_filtered_infomap_b_p.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_p[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_p['metrics'].tolist(), index=df_filtered_infomap_b_p.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_p['rouge'] = df_filtered_infomap_b_p.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_p['rouge1'] = df_filtered_infomap_b_p['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_p['rougeL'] = df_filtered_infomap_b_p['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_p = df_filtered_infomap_b_p[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_p)
+
+
+#### 12. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(beta)
+df_filtered_infomap_b_b = df_filtered.copy()
+
+# Beta Prior 적용 함수
+def apply_beta_prior(word, a=2, b=2):
+    """
+    Beta 분포의 확률 밀도 함수 (pdf)를 사용하여 단어의 사전확률을 계산.
+    a와 b는 Beta 분포의 shape 매개변수.
+    """
+    word_id = (hash(word) % 1000) / 1000  # 단어의 고유 ID를 0~1 사이의 값으로 정규화
+    prior = beta.pdf(word_id, a=a, b=b)
+    
+    return prior
+
+# Term Frequency 계산 함수
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 빈도 계산 함수
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+            
+    return co_occurrence
+
+# 확장된 Infomap 기반 키워드 추출 함수 (Beta Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_beta_prior(text, title, top_n=5, a=2, b=2):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Beta Prior를 사용하여 각 단어의 사전확률을 계산
+        prior_word1 = apply_beta_prior(word_to_id[word1], a=a, b=b)
+        prior_word2 = apply_beta_prior(word_to_id[word2], a=a, b=b)
+        
+        # Term Frequency를 가중치에 반영
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = weight * prior_word1 * prior_word2 * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용
+df_filtered_infomap_b_b['num_keywords'] = df_filtered_infomap_b_b['keywords'].apply(count_keywords)
+
+# Beta Prior를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_b['extracted_keywords'] = df_filtered_infomap_b_b.apply(
+    lambda row: infomap_keywords_extraction_with_beta_prior(
+        row['abstract'], row['title'], top_n=row['num_keywords'], a=2, b=2) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_b.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_b[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_b['metrics'] = df_filtered_infomap_b_b.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_b[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_b['metrics'].tolist(), index=df_filtered_infomap_b_b.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_b['rouge'] = df_filtered_infomap_b_b.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_b['rouge1'] = df_filtered_infomap_b_b['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_b['rougeL'] = df_filtered_infomap_b_b['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_b = df_filtered_infomap_b_b[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_b)
+
+
+#### 12. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(Exponential)
+df_filtered_infomap_b_e = df_filtered.copy()
+
+# Exponential Prior 적용 함수
+def apply_exponential_prior(word, scale=1.0):
+    """
+    Exponential 분포의 확률 밀도 함수 (pdf)를 사용하여 단어의 사전확률을 계산.
+    scale은 Exponential 분포의 scale 매개변수.
+    """
+    word_id = (hash(word) % 1000) / 1000  # 단어의 고유 ID를 0~1 사이의 값으로 정규화
+    prior = expon.pdf(word_id, scale=scale)
+    
+    return prior
+
+# Term Frequency 계산 함수
+def calculate_tf(text):
+    words = word_tokenize(text.lower())
+    doc_length = len(words)
+    word_counts = Counter(words)
+    tf = {word: count / doc_length for word, count in word_counts.items()}
+    return tf
+
+# 공출현 빈도 계산 함수
+def calculate_co_occurrence(words, window_size=2):
+    co_occurrence = Counter()
+    
+    for i, word in enumerate(words):
+        for j in range(i + 1, min(i + 1 + window_size, len(words))):
+            co_occurrence[(word, words[j])] += 1
+            co_occurrence[(words[j], word)] += 1
+            
+    return co_occurrence
+
+# 확장된 Infomap 기반 키워드 추출 함수 (Exponential Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_exponential_prior(text, title, top_n=5, scale=1.0):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Exponential Prior를 사용하여 각 단어의 사전확률을 계산
+        prior_word1 = apply_exponential_prior(word_to_id[word1], scale=scale)
+        prior_word2 = apply_exponential_prior(word_to_id[word2], scale=scale)
+        
+        # Term Frequency를 가중치에 반영
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = weight * prior_word1 * prior_word2 * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# 각 행의 keywords에서 단어 개수를 계산하는 함수
+def count_keywords(keywords):
+    return len(keywords.split())
+
+# DataFrame에 적용
+df_filtered_infomap_b_e['num_keywords'] = df_filtered_infomap_b_e['keywords'].apply(count_keywords)
+
+# Exponential Prior를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_e['extracted_keywords'] = df_filtered_infomap_b_e.apply(
+    lambda row: infomap_keywords_extraction_with_exponential_prior(
+        row['abstract'], row['title'], top_n=row['num_keywords'], scale=1.0) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_e.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_e[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_e['metrics'] = df_filtered_infomap_b_e.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_e[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_e['metrics'].tolist(), index=df_filtered_infomap_b_e.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_e['rouge'] = df_filtered_infomap_b_e.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_e['rouge1'] = df_filtered_infomap_b_e['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_e['rougeL'] = df_filtered_infomap_b_e['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_e = df_filtered_infomap_b_e[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_e)
+
+
+#### 14. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(gaussian) + glove
+df_filtered_infomap_b_g_glove = df_filtered.copy()
+
+# GloVe 임베딩 로드 함수
+def load_glove_embeddings(glove_file_path):
+    embeddings = {}
+    with open(glove_file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            values = line.split()
+            word = values[0]
+            vector = np.asarray(values[1:], dtype='float32')
+            embeddings[word] = vector
+    return embeddings
+
+# GloVe 임베딩 파일 경로
+glove_file_path = r'D:\대학원\논문\textrank\rawdata\glove.6B.100d.txt' 
+glove_embeddings = load_glove_embeddings(glove_file_path)
+
+# 단어 벡터 간 코사인 유사도 계산 함수
+def cosine_similarity(v1, v2):
+    return 1 - cosine(v1, v2)
+
+# 단어 간 유사도 계산 함수 (GloVe 사용)
+def word_similarity(word1, word2, embeddings):
+    if word1 in embeddings and word2 in embeddings:
+        return cosine_similarity(embeddings[word1], embeddings[word2])
+    else:
+        return 0.0  # 임베딩이 없는 경우 유사도를 0으로 설정
+
+# 확장된 Infomap 기반 키워드 추출 함수 (GloVe + Gaussian Prior + TF + Term Position 반영)
+def infomap_keywords_extraction_with_gaussian_prior_glove(text, title, top_n=5, mu=0.0, sigma=1.0, embeddings=None):
+    if not text or text.strip() == '':
+        return []
+    
+    # 텍스트를 문장으로 분리
+    sentences = sent_tokenize(text)
+    words = word_tokenize(text.lower())
+    
+    # Term Frequency 계산
+    tf = calculate_tf(text)
+    
+    # 공출현 계산
+    co_occurrence = calculate_co_occurrence(words)
+    
+    # 단어를 정수로 매핑
+    word_to_id = {word: i for i, word in enumerate(set(words))}
+    id_to_word = {i: word for word, i in word_to_id.items()}
+    
+    # Infomap 알고리즘 초기화
+    infomap = Infomap()
+    
+    # 노드와 엣지를 Infomap 구조에 추가
+    for (word1, word2), weight in co_occurrence.items():
+        # Gaussian Prior를 사용하여 각 단어의 사전확률을 계산
+        prior_word1 = apply_gaussian_prior(word_to_id[word1], mu=mu, sigma=sigma)
+        prior_word2 = apply_gaussian_prior(word_to_id[word2], mu=mu, sigma=sigma)
+        
+        # GloVe 임베딩을 사용한 단어 간 유사도 계산
+        similarity = word_similarity(word1, word2, embeddings)
+        
+        # Term Frequency를 가중치에 반영
+        tf_weight1 = tf.get(word1, 1.0)
+        tf_weight2 = tf.get(word2, 1.0)
+        
+        # 단어가 제목에 있으면 가중치 추가 (Term Position 반영)
+        position_weight1 = 2.0 if word1 in title.lower() else 1.0
+        position_weight2 = 2.0 if word2 in title.lower() else 1.0
+        
+        # 최종 가중치 계산
+        adjusted_weight = similarity * prior_word1 * prior_word2 * tf_weight1 * tf_weight2 * position_weight1 * position_weight2
+        
+        infomap.add_link(word_to_id[word1], word_to_id[word2], adjusted_weight)
+    
+    # Infomap 알고리즘 실행
+    if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
+        infomap.run()
+    else:
+        return []
+    
+    # 각 모듈(커뮤니티)별 단어를 모아서 저장
+    module_words = {}
+    for node in infomap.iterTree():
+        if node.isLeaf:
+            module_id = node.moduleId
+            word = id_to_word[node.physicalId]
+            if module_id not in module_words:
+                module_words[module_id] = []
+            module_words[module_id].append(word)
+    
+    # 각 모듈에서 가장 중요한 단어 확인
+    extracted_keywords = []
+    for words in module_words.values():
+        word_freq = Counter(words)
+        most_common_words = word_freq.most_common(top_n)  # 빈도가 높은 상위 top_n개 단어 선택
+        extracted_keywords.extend([word for word, freq in most_common_words])
+    
+    return extracted_keywords
+
+# DataFrame에 적용
+df_filtered_infomap_b_g_glove['num_keywords'] = df_filtered_infomap_b_g_glove['keywords'].apply(count_keywords)
+
+# Gaussian Prior와 GloVe를 적용하여 Infomap 키워드 추출 함수 실행
+df_filtered_infomap_b_g_glove['extracted_keywords'] = df_filtered_infomap_b_g_glove.apply(
+    lambda row: infomap_keywords_extraction_with_gaussian_prior_glove(
+        row['abstract'], row['title'], top_n=row['num_keywords'], mu=0.0, sigma=1.0, embeddings=glove_embeddings) 
+    if pd.notnull(row['abstract']) else [], axis=1)
+
+# num_keywords 열은 필요 없다면 제거
+df_filtered_infomap_b_g_glove.drop(columns=['num_keywords'], inplace=True)
+
+# 결과 출력 (처음 5행)
+print(df_filtered_infomap_b_g_glove[['abstract', 'keywords', 'extracted_keywords']])
+
+# Precision, Recall, F1 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_g_glove['metrics'] = df_filtered_infomap_b_g_glove.apply(
+    lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_g_glove[['precision', 'recall', 'f1']] = pd.DataFrame(df_filtered_infomap_b_g_glove['metrics'].tolist(), index=df_filtered_infomap_b_g_glove.index)
+
+# ROUGE 점수 계산 및 데이터 프레임에 추가
+df_filtered_infomap_b_g_glove['rouge'] = df_filtered_infomap_b_g_glove.apply(
+    lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
+
+df_filtered_infomap_b_g_glove['rouge1'] = df_filtered_infomap_b_g_glove['rouge'].apply(lambda x: x['rouge1'].fmeasure)
+df_filtered_infomap_b_g_glove['rougeL'] = df_filtered_infomap_b_g_glove['rouge'].apply(lambda x: x['rougeL'].fmeasure)
+
+# 최종 결과 추출
+df_filtered_infomap_b_g_glove = df_filtered_infomap_b_g_glove[['precision', 'recall', 'f1', 'rouge1', 'rougeL']]
+
+# 결과 출력
+print(df_filtered_infomap_b_g_glove)
+
+
+
 
 print(df_result1) #### 1. textrank
 print(df_result2) #### 2. textrank + term frequency, term postion, word co-occurence
@@ -1648,12 +2491,17 @@ print(df_result4) #### 4. textrank + Watts-Strogatz model
 print(df_result5) #### 5. textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting 
 print(df_result51) #### 5.1 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
 print(df_result_infomap) #### 6.textrank + term frequency, term postion, word co-occurence + Infomap
-print(df_result_infomap_g) #### 6.1 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe
+print(df_result_infomap_g) #### 6.1 textrank + Infomap + GloVe 
 print(df_result_infomap_tpc) #### 6.2 textrank + term frequency, term postion, word co-occurence + Infomap
 print(df_result_infomap_g_tpc) #### 6.3 textrank + term frequency, term postion, word co-occurence + Infomap + GloVe 
 print(df_result_infomap_h) #### 7. textrank + term frequency, term postion, word co-occurence + Infomap + Hierarchical
 print(df_result_infomap_m) #### 8. textrank + term frequency, term postion, word co-occurence + Infomap + Multi Entropy
-
+print(df_filtered_infomap_b_g) #### 9. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(gaussian)
+print(df_filtered_infomap_b_d) #### 10. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(dirichlet)
+print(df_filtered_infomap_b_p) #### 11. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(pareto)
+print(df_filtered_infomap_b_b) #### 12. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(beta)
+print(df_filtered_infomap_b_e) #### 13. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(Exponential)
+print(df_filtered_infomap_b_g_glove) #### 14. textrank + term frequency, term postion, word co-occurence + Infomap + bayesian(gaussian) + glove
 
 
 # 각 DataFrame의 평균 계산 함수
@@ -1669,26 +2517,42 @@ means_result4 = calculate_means(df_result4)
 means_result5 = calculate_means(df_result5)
 means_result51 = calculate_means(df_result51)
 means_result_infomap = calculate_means(df_result_infomap)
-means_result_infomap_g = calculate_means(df_result_infomap_g)
+means_result_infomap_glove = calculate_means(df_result_infomap_g)
 means_result_infomap_tpc = calculate_means(df_result_infomap_tpc) 
-means_result_infomap_g_tpc = calculate_means(df_result_infomap_g_tpc)
+means_result_infomap_glove_tpc = calculate_means(df_result_infomap_g_tpc)
 means_result_infomap_h = calculate_means(df_result_infomap_h)
 means_result_infomap_m = calculate_means(df_result_infomap_m)
+means_result_infomap_b_g = calculate_means(df_filtered_infomap_b_g)
+means_result_infomap_b_d = calculate_means(df_filtered_infomap_b_d)
+means_result_infomap_b_p = calculate_means(df_filtered_infomap_b_p)
+means_result_infomap_b_b = calculate_means(df_filtered_infomap_b_b)
+means_result_infomap_b_e = calculate_means(df_filtered_infomap_b_e)
+means_result_infomap_b_g_glove = calculate_means(df_filtered_infomap_b_g_glove)
+
 
 # 평균 결과를 사전으로 변환
 means_dict = {
-    "result1": means_result1,
-    "result2": means_result2,
-    "result3": means_result3,
-    "result4": means_result4,
-    "result5": means_result5,
-    "result51": means_result51,
+    "textrank": means_result1,
+    "textrank + term frequency, term postion, word co-occurence": means_result2,
+    "TP-CoGlo-TextRank(GLove)": means_result3,
+    "Watts-Strogatz model": means_result4,
+    "textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting ": means_result5,
+    "textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove": means_result51,
     "infomap": means_result_infomap,
-    "infomap_g": means_result_infomap_g,
+    "infomap_glove": means_result_infomap_glove,
     "infomap_tpc": means_result_infomap_tpc,
-    "infomap_g_tpc": means_result_infomap_g_tpc,
+    "infomap_glove_tpc": means_result_infomap_glove_tpc,
     "infomap_h": means_result_infomap_h,
-    "infomap_m": means_result_infomap_m
+    "infomap_m": means_result_infomap_m,
+    "infomap_b_g": means_result_infomap_b_g,
+    "infomap_b_d": means_result_infomap_b_d,
+    "infomap_b_p": means_result_infomap_b_p,
+    "infomap_b_b": means_result_infomap_b_b,
+    "infomap_b_e": means_result_infomap_b_e,
+    "infomap_b_g_glove": means_result_infomap_b_g_glove,
+    "infomap_g_tpc_mcmc": means_result_infomap_g_tpc_mcmc,
+    "infomap_g_tpc_ml": means_result_infomap_g_tpc_ml,
+    "infomap_g_tpc_BERT": means_result_infomap_g_tpc_BERT
 }
 
 # 사전을 DataFrame으로 변환
@@ -1698,4 +2562,4 @@ summary_df = pd.DataFrame(means_dict)
 summary_df = summary_df.T
 
 # summary_df를 CSV 파일로 저장
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000.csv', index=False)
+summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000.csv', index=True)
