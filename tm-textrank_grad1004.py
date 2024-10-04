@@ -40,9 +40,8 @@ from scipy.spatial.distance import braycurtis
 
 
 # 파일 경로 설정
-#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv' # 수정
-# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
-file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_combined.csv' # 수정
+file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
+#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_combined.csv' # 수정
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
@@ -155,6 +154,8 @@ def apply_metrics(df):
 
 
 #### M01 textrank
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_01 = df_filtered.copy()
 df_filtered_01.dtypes
@@ -194,12 +195,20 @@ print(df_filtered_01[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_01 = apply_metrics(df_filtered_01)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_01['time'] = total_time
+
 # 최종 결과 출력
-df_result01 = df_filtered_01[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result01 = df_filtered_01[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M02 textrank + term frequency, term postion, word co-occurence
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_02 = df_filtered.copy()
 df_filtered_02.dtypes
@@ -278,12 +287,19 @@ print(df_filtered_02[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_02 = apply_metrics(df_filtered_02)
 
-# 최종 결과 출력
-df_result02 = df_filtered_02[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+end_time = time.time()
 
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_02['time'] = total_time
+
+# 최종 결과 출력
+df_result02 = df_filtered_02[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 #### M03 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting 
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_03 = df_filtered.copy()
 
@@ -406,12 +422,20 @@ print(df_filtered_03[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_03 = apply_metrics(df_filtered_03)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_03['time'] = total_time
+
 # 최종 결과 출력
-df_result03 = df_filtered_03[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result03 = df_filtered_03[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M04 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Glove
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_04 = df_filtered.copy()
 df_filtered_04.dtypes
@@ -548,14 +572,22 @@ print(df_filtered_04[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_04 = apply_metrics(df_filtered_04)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_04['time'] = total_time
+
 # 최종 결과 출력
-df_result04 = df_filtered_04[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result04 = df_filtered_04[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
-# #### M05 textrank + TP-CoGlo-TextRank(GLove)
-# time.sleep(3)
-# df_filtered_05 = df_filtered.copy()
+#### M05 textrank + TP-CoGlo-TextRank(GLove)
+start_time = time.time()
+
+time.sleep(3)
+df_filtered_05 = df_filtered.copy()
 
 # 단어 간 유사도 계산 함수 (GloVe 사용)
 def word_similarity(word1, word2, embeddings):
@@ -622,12 +654,19 @@ print(df_filtered_05[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_05 = apply_metrics(df_filtered_05)
 
-# 최종 결과 출력
-df_result05 = df_filtered_05[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+end_time = time.time()
 
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_05['time'] = total_time
+
+# 최종 결과 출력
+df_result05 = df_filtered_05[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 #### 06. textrank + Watts-Strogatz model
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_06 = df_filtered.copy()
 df_filtered_06.dtypes
@@ -675,12 +714,20 @@ print(df_filtered_06[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_06 = apply_metrics(df_filtered_06)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_06['time'] = total_time
+
 # 최종 결과 출력
-df_result06 = df_filtered_06[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result06 = df_filtered_06[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M07 textrank + Infomap
+start_time = time.time()
+
 time.sleep(3)
 df_filtered_07 = df_filtered.copy()
 df_filtered_07.dtypes
@@ -751,12 +798,20 @@ print(df_filtered_07[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_07 = apply_metrics(df_filtered_07)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_07['time'] = total_time
+
 # 최종 결과 출력
-df_result07 = df_filtered_07[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result07 = df_filtered_07[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M08 textrank + term frequency, term postion, word co-occurence + Infomap
+start_time = time.time()
+
 df_filtered_08 = df_filtered.copy()
 df_filtered_08.dtypes
 
@@ -850,12 +905,20 @@ print(df_filtered_08[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_08 = apply_metrics(df_filtered_08)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_08['time'] = total_time
+
 # 최종 결과 출력
-df_result08 = df_filtered_08[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result08 = df_filtered_08[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M09 textrank + Infomap + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges
+start_time = time.time()
+
 df_filtered_09 = df_filtered.copy()
 df_filtered_09.dtypes
 
@@ -993,12 +1056,20 @@ print(df_filtered_09[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_09 = apply_metrics(df_filtered_09)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_09['time'] = total_time
+
 # 최종 결과 출력
-df_result09 = df_filtered_09[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result09 = df_filtered_09[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M10 textrank + Infomap + GloVe 
+start_time = time.time()
+
 df_filtered_10 = df_filtered.copy()
 df_filtered_10.dtypes
 
@@ -1075,12 +1146,20 @@ print(df_filtered_10[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_10 = apply_metrics(df_filtered_10)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_10['time'] = total_time
+
 # 최종 결과 출력
-df_result10 = df_filtered_10[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result10 = df_filtered_10[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M11 textrank + Infomap + GloVe 
+start_time = time.time()
+
 df_filtered_11 = df_filtered.copy()
 df_filtered_11.dtypes
 
@@ -1169,12 +1248,20 @@ print(df_filtered_11[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_11 = apply_metrics(df_filtered_11)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_11['time'] = total_time
+
 # 최종 결과 출력
-df_result11 = df_filtered_11[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result11 = df_filtered_11[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
+start_time = time.time()
+
 df_filtered_12 = df_filtered.copy()
 df_filtered_12.dtypes
 
@@ -1260,12 +1347,20 @@ print(df_filtered_12[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_12 = apply_metrics(df_filtered_12)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_12['time'] = total_time
+
 # 최종 결과 출력
-df_result12= df_filtered_12[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result12 = df_filtered_12[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M13 textrank + Infomap + 2-layer
+start_time = time.time()
+
 df_filtered_13 = df_filtered.copy()
 df_filtered_13.dtypes
 
@@ -1333,12 +1428,19 @@ print(df_filtered_13[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_13 = apply_metrics(df_filtered_13)
 
-# 최종 결과 출력
-df_result13 = df_filtered_13[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+end_time = time.time()
 
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_13['time'] = total_time
+
+# 최종 결과 출력
+df_result13 = df_filtered_13[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 #### M14 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer
+start_time = time.time()
+
 df_filtered_14 = df_filtered.copy()
 
 # TF 계산 함수
@@ -1439,12 +1541,20 @@ print(df_filtered_14[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_14 = apply_metrics(df_filtered_14)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_14['time'] = total_time
+
 # 최종 결과 출력
-df_result14 = df_filtered_14[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result14 = df_filtered_14[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M15 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer
+start_time = time.time()
+
 df_filtered_15 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
@@ -1565,12 +1675,20 @@ print(df_filtered_15[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_15 = apply_metrics(df_filtered_15)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_15['time'] = total_time
+
 # 최종 결과 출력
-df_result15 = df_filtered_15[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result15 = df_filtered_15[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M16 textrank + Infomap + Hierarchical + GloVe
+start_time = time.time()
+
 df_filtered_16 = df_filtered.copy()
 
 # 공출현 그래프 생성 함수 (GloVe 임베딩 기반 유사도 사용)
@@ -1633,12 +1751,20 @@ print(df_filtered_16[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_16 = apply_metrics(df_filtered_16)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_16['time'] = total_time
+
 # 최종 결과 출력
-df_result16 = df_filtered_16[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result16 = df_filtered_16[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M17 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer + GloVe 
+start_time = time.time()
+
 df_filtered_17 = df_filtered.copy()
 
 # TF 계산 함수
@@ -1740,12 +1866,20 @@ print(df_filtered_17[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_17 = apply_metrics(df_filtered_17)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_17['time'] = total_time
+
 # 최종 결과 출력
-df_result17 = df_filtered_17[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result17 = df_filtered_17[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M18 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 2-layer + GloVe
+start_time = time.time()
+
 df_filtered_18 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
@@ -1866,12 +2000,20 @@ print(df_filtered_18[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_18 = apply_metrics(df_filtered_18)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_18['time'] = total_time
+
 # 최종 결과 출력
-df_result18 = df_filtered_18[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result18 = df_filtered_18[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M19 textrank + Infomap + 3-layer
+start_time = time.time()
+
 df_filtered_19 = df_filtered.copy()
 
 # 엔트로피 계산 함수
@@ -1973,12 +2115,20 @@ print(df_filtered_19[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_19 = apply_metrics(df_filtered_19)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_19['time'] = total_time
+
 # 최종 결과 출력
-df_result19 = df_filtered_19[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result19 = df_filtered_19[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M20 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer
+start_time = time.time()
+
 df_filtered_20 = df_filtered.copy()
 
 # 공출현 계산 함수
@@ -2092,12 +2242,20 @@ print(df_filtered_20[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_20 = apply_metrics(df_filtered_20)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_20['time'] = total_time
+
 # 최종 결과 출력
-df_result20 = df_filtered_20[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result20 = df_filtered_20[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M21 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer
+start_time = time.time()
+
 df_filtered_21 = df_filtered.copy()
 
 # Double Negation, Mitigation, and Hedges Weighting 적용 함수
@@ -2244,12 +2402,20 @@ print(df_filtered_21[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_21 = apply_metrics(df_filtered_21)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_21['time'] = total_time
+
 # 최종 결과 출력
-df_result21 = df_filtered_21[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result21 = df_filtered_21[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M22 textrank + Infomap + Multi Entropy + GloVe 
+start_time = time.time()
+
 df_filtered_22 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
@@ -2356,12 +2522,20 @@ print(df_filtered_22[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_22 = apply_metrics(df_filtered_22)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_22['time'] = total_time
+
 # 최종 결과 출력
-df_result22 = df_filtered_22[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result22 = df_filtered_22[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M23 textrank + term frequency, term postion, word co-occurence + Infomap + 3-layer + GloVe 
+start_time = time.time()
+
 df_filtered_23 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
@@ -2468,12 +2642,20 @@ print(df_filtered_23[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_23 = apply_metrics(df_filtered_23)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_23['time'] = total_time
+
 # 최종 결과 출력
-df_result23 = df_filtered_23[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result23 = df_filtered_23[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M24 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + 3-layer + GloVe 
+start_time = time.time()
+
 df_filtered_24 = df_filtered.copy()
 
 # GloVe 기반 문장 임베딩 계산 함수
@@ -2613,8 +2795,14 @@ print(df_filtered_24[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_24 = apply_metrics(df_filtered_24)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_24['time'] = total_time
+
 # 최종 결과 출력
-df_result24 = df_filtered_24[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result24 = df_filtered_24[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
@@ -2623,6 +2811,8 @@ df_result24 = df_filtered_24[['precision', 'recall', 'f1', 'rouge1', 'rougeL', '
 # Jaccard 유사도는 단순히 두 집합에서 단어의 존재 여부만을 고려하여 교집합과 합집합을 계산합니다.
 # 이 때문에, 단어가 텍스트에 몇 번 등장했는지 또는 단어가 문장의 어느 위치에 있는지는 Jaccard 유사도에 반영되지 않습니다.
 # Glove 임베딩, 단어 빈도 (TF), 단어 위치 (Position), 공출현(Word Co-occurrence) 등과는 달리, Jaccard 유사도는 단어 간의 의미적 유사성이나 중요도를 고려하지 않기 때문에 결과에 큰 차이를 만들지 못합니다.
+start_time = time.time()
+
 df_filtered_25 = df_filtered.copy()
 df_filtered_25 .dtypes
 
@@ -2708,8 +2898,14 @@ print(df_filtered_25[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_25 = apply_metrics(df_filtered_25)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_25['time'] = total_time
+
 # 최종 결과 출력
-df_result25 = df_filtered_25[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result25 = df_filtered_25[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
@@ -2718,6 +2914,8 @@ df_result25 = df_filtered_25[['precision', 'recall', 'f1', 'rouge1', 'rougeL', '
 # Jaccard 유사도는 단순히 두 집합에서 단어의 존재 여부만을 고려하여 교집합과 합집합을 계산합니다.
 # 이 때문에, 단어가 텍스트에 몇 번 등장했는지 또는 단어가 문장의 어느 위치에 있는지는 Jaccard 유사도에 반영되지 않습니다.
 # Glove 임베딩, 단어 빈도 (TF), 단어 위치 (Position), 공출현(Word Co-occurrence) 등과는 달리, Jaccard 유사도는 단어 간의 의미적 유사성이나 중요도를 고려하지 않기 때문에 결과에 큰 차이를 만들지 못합니다.
+start_time = time.time()
+
 df_filtered_26 = df_filtered.copy()
 df_filtered_26.dtypes
 
@@ -2840,12 +3038,20 @@ print(df_filtered_26[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_26 = apply_metrics(df_filtered_26)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_26['time'] = total_time
+
 # 최종 결과 출력
-df_result26 = df_filtered_26[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result26 = df_filtered_26[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M27 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + jcd
+start_time = time.time()
+
 df_filtered_27 = df_filtered.copy()
 
 # Preprocess the abstract (remove stopwords and tokenize)
@@ -2989,12 +3195,20 @@ print(df_filtered_27[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_27 = apply_metrics(df_filtered_27)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_27['time'] = total_time
+
 # 최종 결과 출력
-df_result27 = df_filtered_27[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result27 = df_filtered_27[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M28 textrank + Infomap + NetMRF
+start_time = time.time()
+
 df_filtered_28 = df_filtered.copy()
 df_filtered_28.dtypes
 
@@ -3083,12 +3297,20 @@ print(df_filtered_28[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_28 = apply_metrics(df_filtered_28)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_28['time'] = total_time
+
 # 최종 결과 출력
-df_result28 = df_filtered_28[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result28 = df_filtered_28[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M29 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF
+start_time = time.time()
+
 df_filtered_29 = df_filtered.copy()
 df_filtered_29.dtypes
 
@@ -3206,12 +3428,20 @@ print(df_filtered_29[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_29 = apply_metrics(df_filtered_29)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_29['time'] = total_time
+
 # 최종 결과 출력
-df_result29 = df_filtered_29[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result29 = df_filtered_29[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M30 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF
+start_time = time.time()
+
 df_filtered_30 = df_filtered.copy()
 df_filtered_30.dtypes
 
@@ -3356,12 +3586,20 @@ print(df_filtered_30[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_30 = apply_metrics(df_filtered_30)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_30['time'] = total_time
+
 # 최종 결과 출력
-df_result30 = df_filtered_30[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result30 = df_filtered_30[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M31 textrank + Infomap + NetMRF + GloVe 
+start_time = time.time()
+
 df_filtered_31 = df_filtered.copy()
 
 # GloVe 임베딩을 사용한 유사도 계산 함수
@@ -3463,12 +3701,20 @@ print(df_filtered_31[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_31 = apply_metrics(df_filtered_31)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_31['time'] = total_time
+
 # 최종 결과 출력
-df_result31 = df_filtered_31[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result31 = df_filtered_31[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M32 textrank + term frequency, term postion, word co-occurence + Infomap + NetMRF + GloVe 
+start_time = time.time()
+
 df_filtered_32 = df_filtered.copy()
 df_filtered_32.dtypes
 
@@ -3600,12 +3846,20 @@ print(df_filtered_32[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_32 = apply_metrics(df_filtered_32)
 
+end_time = time.time()
+
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_32['time'] = total_time
+
 # 최종 결과 출력
-df_result32 = df_filtered_32[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+df_result32 = df_filtered_32[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 
 #### M33 textrank + term frequency, term postion, word co-occurence + Double Negation, Mitigation, and Hedges Weighting + Infomap + NetMRF + GloVe 
+start_time = time.time()
+
 df_filtered_33 = df_filtered.copy()
 df_filtered_33.dtypes
 
@@ -3734,9 +3988,14 @@ print(df_filtered_33[['abstract', 'keywords', 'extracted_keywords']])
 time.sleep(3)
 df_filtered_33 = apply_metrics(df_filtered_33)
 
-# 최종 결과 출력
-df_result33 = df_filtered_33[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis']]
+end_time = time.time()
 
+# 처리 시간 계산 후 time 열에 추가
+total_time = end_time - start_time
+df_filtered_33['time'] = total_time
+
+# 최종 결과 출력
+df_result33 = df_filtered_33[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
 
 
 print(df_result01) #### M01 textrank
@@ -3862,8 +4121,7 @@ summary_df = pd.DataFrame(means_dict)
 summary_df = summary_df.T
 
 # summary_df를 CSV 파일로 저장
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000_0911.csv', index=True)
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_20000_0911.csv', index=True)
+summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_20000_1004.csv', index=True)
 
 # 1. Precision (정밀도) 용도: 정밀도는 모델이 얼마나 정확하게 예측했는지를 나타냅니다. 즉, 예측한 결과가 실제로 얼마나 맞았는지를 평가할 때 사용됩니다.
 

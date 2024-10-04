@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # 파일 경로 설정
-input_dir = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\processed_chunks\\'
+input_dir = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\processed_chunks1002\\'
 output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_combined.csv'
 
 # 파일 목록 가져오기
