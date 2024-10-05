@@ -40,8 +40,11 @@ from scipy.spatial.distance import braycurtis
 
 
 # 파일 경로 설정
-file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
-#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_combined.csv' # 수정
+# file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined100.csv'
+file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined1000.csv'
+#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined10000.csv'
+#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined100000.csv'
+
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
@@ -50,6 +53,7 @@ df_filtered.dtypes
 df_filtered = df_filtered[['id', 'title', 'keywords', 'year', 'abstract', 'authors']]
 df_filtered = df_filtered.dropna(subset=['id', 'title', 'keywords', 'year', 'abstract', 'authors'])
 df_filtered['keywords']
+df_filtered['keywords'] = df_filtered['keywords'].str.replace(',', '', regex=False)
 
 # keyword 열에서 가장 많은 키워드 수 계산
 nltk.download('punkt')
@@ -596,28 +600,28 @@ def word_similarity(word1, word2, embeddings):
     else:
         return 0.0  # 임베딩이 없는 경우 유사도를 0으로 설정
 
-# # 유사도 행렬 계산 with noise  # 데이터 프레임 크기가 작은 경우 인위적으로 noise 추가
-# def compute_similarity_matrix(words, embeddings, epsilon=1e-5):
-#     size = len(words)
-#     similarity_matrix = np.zeros((size, size))
-    
-#     for i in range(size):
-#         for j in range(size):
-#             if i != j:
-#                 similarity = word_similarity(words[i], words[j], embeddings)
-#                 similarity_matrix[i][j] = similarity if similarity > epsilon else epsilon
-#     return similarity_matrix
-
-# without noise
-def compute_similarity_matrix(words, embeddings):
+# 유사도 행렬 계산 with noise  # 데이터 프레임 크기가 작은 경우 인위적으로 noise 추가
+def compute_similarity_matrix(words, embeddings, epsilon=1e-5):
     size = len(words)
     similarity_matrix = np.zeros((size, size))
     
     for i in range(size):
         for j in range(size):
             if i != j:
-                similarity_matrix[i][j] = word_similarity(words[i], words[j], embeddings)
+                similarity = word_similarity(words[i], words[j], embeddings)
+                similarity_matrix[i][j] = similarity if similarity > epsilon else epsilon
     return similarity_matrix
+
+# # without noise
+# def compute_similarity_matrix(words, embeddings):
+#     size = len(words)
+#     similarity_matrix = np.zeros((size, size))
+    
+#     for i in range(size):
+#         for j in range(size):
+#             if i != j:
+#                 similarity_matrix[i][j] = word_similarity(words[i], words[j], embeddings)
+#     return similarity_matrix
 
 # TP-CoGlo-TextRank 키워드 추출 함수
 def tp_coglo_textrank(text, top_n=5, embeddings=None):
@@ -4121,7 +4125,10 @@ summary_df = pd.DataFrame(means_dict)
 summary_df = summary_df.T
 
 # summary_df를 CSV 파일로 저장
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_20000_1004.csv', index=True)
+#summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_100.csv', index=True)
+summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000.csv', index=True)
+#summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_10000.csv', index=True)
+#summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_100000.csv', index=True)
 
 # 1. Precision (정밀도) 용도: 정밀도는 모델이 얼마나 정확하게 예측했는지를 나타냅니다. 즉, 예측한 결과가 실제로 얼마나 맞았는지를 평가할 때 사용됩니다.
 
