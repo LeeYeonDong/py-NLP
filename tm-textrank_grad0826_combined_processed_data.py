@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # 파일 경로 설정
-input_dir = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\processed_chunks1002\\'
+input_dir = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\processed_chunks\\'
 output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_combined.csv'
 
 # 파일 목록 가져오기
@@ -36,17 +36,19 @@ import pandas as pd
 import os
 import random
 
-## 랜덤하게 1000개
+## 랜덤하게 n개
 # 파일 경로 설정
 input_dir = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\processed_chunks\\'
-output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv'
+output_file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined1000000.csv'
 
 # 파일 목록 가져오기
 all_files = os.listdir(input_dir)
 all_files = [f for f in all_files if f.endswith('.csv')]  # .csv 파일만 선택
 
 # 파일을 랜덤하게 1000개 선택
-random_files = random.sample(all_files, 1000)
+num = 1000000/20
+num = int(num)
+random_files = random.sample(all_files, num)
 
 # 빈 데이터프레임 생성
 combined_df = pd.DataFrame()

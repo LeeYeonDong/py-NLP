@@ -1169,14 +1169,8 @@ df_filtered_11.dtypes
 df_filtered_11['keywords']
 df_filtered_11['abstract']
 
-# GloVe 임베딩을 사용한 Infomap 기반 키워드 추출 함수 정의# 단어 벡터 간 코사인 유사도 계산 함수
-def cosine_similarity(v1, v2):
-    v1 = v1.reshape(1, -1)  # 1차원 벡터를 2차원으로 변환
-    v2 = v2.reshape(1, -1)  # 1차원 벡터를 2차원으로 변환
-    return sklearn_cosine_similarity(v1, v2)[0][0]
-
-# GloVe 임베딩을 사용한 Infomap 기반 키워드 추출 함수 정의
-def infomap_keywords_extraction_glove(title, abstract, top_n=5, beta=0.5, embeddings=None):
+# Infomap을 사용하여 커뮤니티별로 중요한 단어를 추출하는 함수 정의 (GloVe 추가)
+def infomap_keywords_extraction_glove(title, abstract, embeddings, top_n=5, beta=0.5):
     if not title or not abstract or title.strip() == '' or abstract.strip() == '':
         return []
 
@@ -1195,25 +1189,28 @@ def infomap_keywords_extraction_glove(title, abstract, top_n=5, beta=0.5, embedd
     word_to_id = {word: i for i, word in enumerate(set(words))}
     id_to_word = {i: word for word, i in word_to_id.items()}
 
-    # 문장 간 임베딩 기반 유사도 계산
-    similarity_matrix = np.zeros((len(words), len(words)))
-    
-    for word1 in words:
-        for word2 in words:
-            if word1 in embeddings and word2 in embeddings:
-                similarity_matrix[word_to_id[word1]][word_to_id[word2]] = cosine_similarity(embeddings[word1], embeddings[word2])
-            else:
-                similarity_matrix[word_to_id[word1]][word_to_id[word2]] = 0  # 임베딩이 없는 경우 유사도는 0
-
     # Infomap 알고리즘 초기화
     infomap = Infomap()
 
     # 노드와 엣지를 Infomap 구조에 추가
     for i, word in enumerate(words):
+        if word not in embeddings:
+            continue
         for j in range(i + 1, len(words)):
-            weight = 1 if word in words_title else beta  # 제목에 있는 단어일 경우 가중치를 1로 설정
+            if words[j] not in embeddings:
+                continue
+            
+            # GloVe 임베딩을 사용하여 단어 간 유사도 계산
+            vector_word = embeddings[word]
+            vector_word_j = embeddings[words[j]]
+            similarity = cosine_similarity(vector_word, vector_word_j)
+
+            # 제목에 있는 단어일 경우 가중치를 1로 설정, 아니면 beta로 설정
+            weight = 1 if word in words_title else beta
+            weight *= similarity  # GloVe 유사도 반영
+
             if (word, words[j]) in co_occurrence:
-                infomap.add_link(word_to_id[word], word_to_id[words[j]], similarity_matrix[word_to_id[word]][word_to_id[words[j]]])
+                infomap.add_link(word_to_id[word], word_to_id[words[j]], weight)
     
     # Infomap 알고리즘 실행
     if infomap.num_nodes > 0:  # 노드가 있을 경우에만 실행
@@ -1241,6 +1238,11 @@ def infomap_keywords_extraction_glove(title, abstract, top_n=5, beta=0.5, embedd
     return extracted_keywords
 
 # DataFrame에 적용
+df_filtered_11['extracted_keywords_glove'] = df_filtered_11.apply(
+    lambda row: infomap_keywords_extraction_glove(row['title'], row['abstract'], glove_embeddings, top_n=row['num_keywords']) if pd.notnull(row['abstract']) else [], axis=1
+)
+
+# DataFrame에 적용
 df_filtered_11['num_keywords'] = df_filtered_11['keywords'].apply(count_keywords)
 
 # Infomap과 GloVe 임베딩을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
@@ -1251,7 +1253,6 @@ df_filtered_11['extracted_keywords'] = df_filtered_11.apply(
 
 # 데이터 프레임 출력 
 print(df_filtered_11[['abstract', 'keywords', 'extracted_keywords']])
-
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
 time.sleep(3)
@@ -1268,152 +1269,63 @@ df_result11 = df_filtered_11[['precision', 'recall', 'f1', 'rouge1', 'rougeL', '
 
 
 
-################
-# GloVe 임베딩 로드 함수
-def load_glove_embeddings(glove_file_path):
-    embeddings = {}
-    with open(glove_file_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            values = line.split()
-            word = values[0]
-            vector = np.asarray(values[1:], dtype='float32')
-            embeddings[word] = vector
-    return embeddings
-
-# 단어 벡터 간 코사인 유사도 계산 함수
-def cosine_similarity(v1, v2):
-    return 1 - cosine(v1, v2)
-
-# GloVe 임베딩 파일 경로
-glove_file_path = r'D:\대학원\논문\textrank\rawdata\glove.6B.100d.txt' 
-glove_embeddings = load_glove_embeddings(glove_file_path)
-
-time.sleep(3)
-
-# 문장 간 유사도를 계산하는 함수 (GloVe 임베딩 사용)
-def sentence_similarity(sentence1, sentence2, embeddings):
-    words1 = word_tokenize(sentence1.lower())
-    words2 = word_tokenize(sentence2.lower())
-    
-    vectors1 = [embeddings[word] for word in words1 if word in embeddings]
-    vectors2 = [embeddings[word] for word in words2 if word in embeddings]
-    
-    if not vectors1 or not vectors2:
-        return 0  # 벡터가 없는 경우 유사도 0
-    
-    # 각 단어 벡터의 평균을 문장 벡터로 사용
-    sentence_vector1 = np.mean(vectors1, axis=0)
-    sentence_vector2 = np.mean(vectors2, axis=0)
-    
-    return cosine_similarity(sentence_vector1, sentence_vector2)
-
-# Precision, Recall, F1 계산 함수
-def calculate_metrics(extracted, actual):
-    extracted_set = set(extracted)
-    actual_set = set(actual)
-    
-    true_positive = len(extracted_set & actual_set)
-    false_positive = len(extracted_set - actual_set)
-    false_negative = len(actual_set - extracted_set)
-    
-    precision = true_positive / (true_positive + false_positive) if true_positive + false_positive > 0 else 0
-    recall = true_positive / (true_positive + false_negative) if true_positive + false_negative > 0 else 0
-    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
-    
-    return precision, recall, f1
-
-# ROUGE 계산 함수
-scorer = rouge_scorer.RougeScorer(['rouge1', 'rougeL'], use_stemmer=True)
-
-def calculate_rouge(extracted, actual):
-    extracted_text = ' '.join(extracted)
-    actual_text = ' '.join(actual)
-    scores = scorer.score(actual_text, extracted_text)
-    return scores
-
-# FM Index, ARI, MCC, Bray-Curtis Dissimilarity를 계산하는 함수
-def calculate_additional_metrics(extracted, actual):
-    extracted_set = set(extracted)
-    actual_set = set(actual)
-
-    # 이진화된 벡터로 변환 (키워드 존재 여부에 따라 1, 0으로 구분)
-    extracted_binary = [1 if word in extracted_set else 0 for word in actual]
-    actual_binary = [1] * len(actual)
-
-    if len(extracted_binary) == len(actual_binary):
-        fm_index = fowlkes_mallows_score(actual_binary, extracted_binary)
-        ari = adjusted_rand_score(actual_binary, extracted_binary)
-        mcc = matthews_corrcoef(actual_binary, extracted_binary)
-        bray_curtis = braycurtis(extracted_binary, actual_binary)
-    else:
-        fm_index, ari, mcc, bray_curtis = 0, 0, 0, 1  # 다른 크기의 경우 처리
-
-    return fm_index, ari, mcc, bray_curtis
-
-# DataFrame에 적용하여 모든 메트릭스 계산
-def apply_metrics(df):
-    # Precision, Recall, F1, ROUGE 계산
-    df['metrics'] = df.apply(lambda row: calculate_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
-    df[['precision', 'recall', 'f1']] = pd.DataFrame(df['metrics'].tolist(), index=df.index)
-
-    df['rouge'] = df.apply(lambda row: calculate_rouge(row['extracted_keywords'], row['keywords'].split()), axis=1)
-    df['rouge1'] = df['rouge'].apply(lambda x: x['rouge1'].fmeasure)
-    df['rougeL'] = df['rouge'].apply(lambda x: x['rougeL'].fmeasure)
-
-    # FM Index, ARI, MCC, Bray-Curtis Dissimilarity 계산
-    df['additional_metrics'] = df.apply(lambda row: calculate_additional_metrics(row['extracted_keywords'], row['keywords'].split()), axis=1)
-    df[['FM_Index', 'ARI', 'MCC', 'Bray_Curtis']] = pd.DataFrame(df['additional_metrics'].tolist(), index=df.index)
-
-    return df
-
-
 #### M12 textrank + term frequency, term postion, word co-occurence + Infomap + Double Negation, Mitigation, and Hedges + GloVe
 start_time = time.time()
 
 df_filtered_12 = df_filtered.copy()
 df_filtered_12.dtypes
 
-# GloVe 임베딩 로드 함수
-def load_glove_embeddings(glove_file_path):
-    embeddings = {}
-    with open(glove_file_path, 'r', encoding='utf-8') as f:
-        for line in f:
-            values = line.split()
-            word = values[0]
-            vector = np.asarray(values[1:], dtype='float32')
-            embeddings[word] = vector
-    return embeddings
+# Double Negation, Mitigation, and Hedges Weighting 적용 함수
+def apply_weights(text):
+    sentences = sent_tokenize(text)
+    weighted_sentences = []
+    
+    for sentence in sentences:
+        words = word_tokenize(sentence.lower())
+        weight = 1.0  # 기본 가중치
+
+        # Double Negation 가중치 적용
+        negation_indices = [i for i, word in enumerate(words) if word in ['not', 'no', 'never', 'nobody', 'nothing', 'neither', 'nowhere', 'none']]
+        if len(negation_indices) > 1:
+            distance = negation_indices[-1] - negation_indices[0]
+            weight += distance / len(words)  # 거리가 길수록 가중치 증가
+
+        # Mitigation (완화 표현) 가중치 적용
+        mitigation_words = ['sort of', 'kind of', 'a little', 'rather', 'somewhat', 'partly', 'slightly', 'to some extent', 'moderately', 'fairly', 'in part', 'just']
+        for word in words:
+            if word in mitigation_words:
+                weight += 0.5  # 완화 표현 발견 시 가중치 증가
+
+        # Hedges (완충 표현) 가중치 적용
+        hedges_words = ['maybe', 'possibly', 'could', 'might', 'perhaps', 'seem', 'appear', 'likely', 'suggest', 'indicate', 'presumably', 'likely', 'arguably']
+        for word in words:
+            if word in hedges_words:
+                weight += 0.2  # 완충 표현 발견 시 가중치 증가
+
+        weighted_sentences.append((sentence, weight))
+    
+    return weighted_sentences
+
 
 # 단어 벡터 간 코사인 유사도 계산 함수
 def cosine_similarity(v1, v2):
-    v1 = v1.reshape(1, -1)
-    v2 = v2.reshape(1, -1)
-    return sklearn_cosine_similarity(v1, v2)[0][0]
+    v1 = np.ravel(v1)  # 벡터를 1D로 변환
+    v2 = np.ravel(v2)  # 벡터를 1D로 변환
+    return 1 - cosine(v1, v2)
 
-# Textrank를 위한 유사도 행렬 계산
-def compute_textrank_similarity_matrix(text, embeddings):
-    sentences = sent_tokenize(text)
-    size = len(sentences)
-    similarity_matrix = np.zeros((size, size))
-    
-    for i in range(size):
-        for j in range(i + 1, size):
-            sim = sentence_similarity(sentences[i], sentences[j], embeddings)
-            similarity_matrix[i][j] = sim
-            similarity_matrix[j][i] = sim
-    
-    return similarity_matrix, sentences
-
-# 문장 간 유사도를 계산하는 함수 (GloVe 임베딩 사용)
+# GloVe 임베딩에 포함되지 않은 단어 확인
 def sentence_similarity(sentence1, sentence2, embeddings):
     words1 = word_tokenize(sentence1.lower())
     words2 = word_tokenize(sentence2.lower())
     
+    # GloVe에 있는 단어들만 벡터로 변환
     vectors1 = [embeddings[word] for word in words1 if word in embeddings]
     vectors2 = [embeddings[word] for word in words2 if word in embeddings]
     
     if not vectors1 or not vectors2:
-        return 0  # 벡터가 없는 경우 유사도 0
+        # 벡터가 없는 경우 유사도 0으로 설정하고 GloVe에 없는 단어들 출력
+        print(f"GloVe 임베딩에 포함되지 않은 단어들: {set(words1).difference(embeddings.keys())}, {set(words2).difference(embeddings.keys())}")
+        return 0
     
     # 각 단어 벡터의 평균을 문장 벡터로 사용
     sentence_vector1 = np.mean(vectors1, axis=0)
@@ -1421,7 +1333,24 @@ def sentence_similarity(sentence1, sentence2, embeddings):
     
     return cosine_similarity(sentence_vector1, sentence_vector2)
 
-# Infomap 기반 키워드 추출 함수 (Textrank와 결합)
+# Textrank를 위한 유사도 행렬 계산 (가중치 적용)
+def compute_textrank_similarity_matrix(text, embeddings):
+    weighted_sentences = apply_weights(text)  # 가중치 적용된 문장 리스트
+    sentences = [s for s, w in weighted_sentences]  # 문장 리스트
+    weights = [w for s, w in weighted_sentences]  # 각 문장의 가중치 리스트
+    size = len(sentences)
+    
+    similarity_matrix = np.zeros((size, size))
+    
+    for i in range(size):
+        for j in range(i + 1, size):
+            sim = sentence_similarity(sentences[i], sentences[j], embeddings)
+            similarity_matrix[i][j] = sim * (weights[i] + weights[j]) / 2  # 가중치 적용
+            similarity_matrix[j][i] = similarity_matrix[i][j]
+    
+    return similarity_matrix, sentences
+
+# Infomap 기반 키워드 추출 함수 (Textrank와 결합, 가중치 적용)
 def textrank_infomap_keywords_glove(title, abstract, top_n=5, embeddings=None):
     if not title or not abstract or title.strip() == '' or abstract.strip() == '':
         return []
@@ -1465,6 +1394,7 @@ def textrank_infomap_keywords_glove(title, abstract, top_n=5, embeddings=None):
     for module_id, module_sents in module_sentences.items():
         word_freq = Counter(word_tokenize(" ".join(module_sents).lower()))
         most_common_words = word_freq.most_common(top_n)
+        # GloVe에 있는 단어만 추출
         extracted_keywords.extend([word for word, _ in most_common_words if word in embeddings])
     
     return list(set(extracted_keywords))[:top_n]
@@ -1474,16 +1404,16 @@ def count_keywords(keywords):
     return len(keywords.split())
 
 # DataFrame에 적용
-df_filtered_11['num_keywords'] = df_filtered_11['keywords'].apply(count_keywords)
+df_filtered_12['num_keywords'] = df_filtered_12['keywords'].apply(count_keywords)
 
 # Infomap과 GloVe 임베딩을 사용하여 키워드를 추출하면서 각 행의 'num_keywords'를 top_n으로 지정
-df_filtered_11['extracted_keywords'] = df_filtered_11.apply(
+df_filtered_12['extracted_keywords'] = df_filtered_12.apply(
     lambda row: textrank_infomap_keywords_glove(row['title'], row['abstract'], top_n=row['num_keywords'], embeddings=glove_embeddings) if pd.notnull(row['abstract']) else [],
     axis=1
 )
 
 # 데이터 프레임 출력 
-print(df_filtered_11[['abstract', 'keywords', 'extracted_keywords']])
+print(df_filtered_12[['abstract', 'keywords', 'extracted_keywords']])
 
 
 # 데이터프레임에서 모든 메트릭을 계산하여 최종 결과 반환
@@ -1579,7 +1509,6 @@ df_filtered_13['time'] = total_time
 
 # 최종 결과 출력
 df_result13 = df_filtered_13[['precision', 'recall', 'f1', 'rouge1', 'rougeL', 'FM_Index', 'ARI', 'MCC', 'Bray_Curtis', 'time']]
-
 
 #### M14 textrank + term frequency, term postion, word co-occurence + Infomap + 2-layer
 start_time = time.time()
@@ -3354,6 +3283,8 @@ start_time = time.time()
 
 df_filtered_28 = df_filtered.copy()
 df_filtered_28.dtypes
+df_filtered_28['keywords']
+df_filtered_28['abstract']
 
 # MRF 초기화 및 최적화 함수 (NetMRF 적용)
 def initialize_mrf(similarity_matrix):

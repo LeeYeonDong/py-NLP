@@ -40,8 +40,7 @@ from sklearn.preprocessing import normalize
 # Fowlkes–Mallows Index (FM Index), Adjusted Rand Index (ARI), Matthews Correlation Coefficient (MCC), Bray-Curtis Dissimilarity (브레이-커티스 비유사도)
 
 # 파일 경로 설정
-file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_processed.csv' # 수정
-#file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined.csv' # 1000*20
+file_path = 'D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\dblp_v14_random_sample_combined100.csv' # 1000*20
 
 # CSV 파일 불러오기
 df_filtered = pd.read_csv(file_path)
@@ -49,7 +48,7 @@ df_filtered = df_filtered.astype(str)
 df_filtered.dtypes
 df_filtered = df_filtered[['id', 'title', 'keywords', 'year', 'abstract', 'authors']]
 df_filtered = df_filtered.dropna(subset=['id', 'title', 'keywords', 'year', 'abstract', 'authors'])
-df_filtered['keywords']
+df_filtered['keywords'] = df_filtered['keywords'].str.replace(',', '', regex=False)
 
 # keyword 열에서 가장 많은 키워드 수 계산
 nltk.download('punkt')
@@ -2964,5 +2963,4 @@ summary_df = pd.DataFrame(means_dict)
 summary_df = summary_df.T
 
 # summary_df를 CSV 파일로 저장
-#summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_1000.csv', index=True)
-summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_20000.csv', index=True)
+summary_df.to_csv('D:\\대학원\\논문\\textrank\\rawdata\\dblp_v14.tar\\summary_df_result_100_0910.csv', index=True)
